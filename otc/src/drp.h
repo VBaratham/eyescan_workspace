@@ -1,0 +1,183 @@
+/*
+ * Copyright (c) 2009 Xilinx, Inc.  All rights reserved.
+ *
+ * Xilinx, Inc.
+ * XILINX IS PROVIDING THIS DESIGN, CODE, OR INFORMATION "AS IS" AS A
+ * COURTESY TO YOU.  BY PROVIDING THIS DESIGN, CODE, OR INFORMATION AS
+ * ONE POSSIBLE   IMPLEMENTATION OF THIS FEATURE, APPLICATION OR
+ * STANDARD, XILINX IS MAKING NO REPRESENTATION THAT THIS IMPLEMENTATION
+ * IS FREE FROM ANY CLAIMS OF INFRINGEMENT, AND YOU ARE RESPONSIBLE
+ * FOR OBTAINING ANY RIGHTS YOU MAY REQUIRE FOR YOUR IMPLEMENTATION.
+ * XILINX EXPRESSLY DISCLAIMS ANY WARRANTY WHATSOEVER WITH RESPECT TO
+ * THE ADEQUACY OF THE IMPLEMENTATION, INCLUDING BUT NOT LIMITED TO
+ * ANY WARRANTIES OR REPRESENTATIONS THAT THIS IMPLEMENTATION IS FREE
+ * FROM CLAIMS OF INFRINGEMENT, IMPLIED WARRANTIES OF MERCHANTABILITY
+ * AND FITNESS FOR A PARTICULAR PURPOSE.
+ *
+ */
+
+#include "xil_types.h"
+//#include "xiomodule.h"
+
+//Used as an index for arrays drp_addr, drp_mask, drp_start_bit
+#define ES_CONTROL        0
+#define ES_HORZ_OFFSET    1
+#define ES_PRESCALE       2
+#define ES_VERT_OFFSET    3
+#define ES_CONTROL_STATUS 4
+#define ES_ERROR_COUNT    5
+#define ES_SAMPLE_COUNT   6
+#define ES_EYESCAN_EN     7
+#define ES_ERRDET_EN      8
+#define ES_SDATA_MASK0    9
+#define ES_SDATA_MASK1    10
+#define ES_SDATA_MASK2    11
+#define ES_SDATA_MASK3    12
+#define ES_SDATA_MASK4    13
+#define ES_QUAL_MASK0     14
+#define ES_QUAL_MASK1     15
+#define ES_QUAL_MASK2     16
+#define ES_QUAL_MASK3     17
+#define ES_QUAL_MASK4     18
+#define PMA_RSV2          19
+#define ALIGN_COMMA_WORD  20
+#define TX_INT_DATAWIDTH  21
+#define TX_DATA_WIDTH     22
+#define RX_INT_DATAWIDTH  23
+#define RX_DATA_WIDTH     24
+
+//Constants to hold DRP address of various attributes (for 7 Series GTX transceiver)
+#define DRP_ADDR_ES_CONTROL        0x03D
+#define DRP_ADDR_ES_HORZ_OFFSET    0x03C
+#define DRP_ADDR_ES_PRESCALE       0x03B
+#define DRP_ADDR_ES_VERT_OFFSET    0x03B
+#define DRP_ADDR_ES_CONTROL_STATUS 0x151
+#define DRP_ADDR_ES_ERROR_COUNT    0x14F
+#define DRP_ADDR_ES_SAMPLE_COUNT   0x150
+#define DRP_ADDR_ES_EYESCAN_EN     0x03D
+#define DRP_ADDR_ES_ERRDET_EN      0x03D
+#define DRP_ADDR_ES_SDATA_MASK0    0x036
+#define DRP_ADDR_ES_SDATA_MASK1    0x037
+#define DRP_ADDR_ES_SDATA_MASK2    0x038
+#define DRP_ADDR_ES_SDATA_MASK3    0x039
+#define DRP_ADDR_ES_SDATA_MASK4    0x03A
+#define DRP_ADDR_ES_QUAL_MASK0     0x031
+#define DRP_ADDR_ES_QUAL_MASK1     0x032
+#define DRP_ADDR_ES_QUAL_MASK2     0x033
+#define DRP_ADDR_ES_QUAL_MASK3     0x034
+#define DRP_ADDR_ES_QUAL_MASK4     0x035
+#define DRP_ADDR_PMA_RSV2          0x082
+#define DRP_ADDR_ALIGN_COMMA_WORD  0x041
+#define DRP_ADDR_TX_INT_DATAWIDTH  0x06B
+#define DRP_ADDR_TX_DATA_WIDTH     0x06B
+#define DRP_ADDR_RX_INT_DATAWIDTH  0x011
+#define DRP_ADDR_RX_DATA_WIDTH     0x011
+#define DRP_RX_PRBS_ERR_CNT        0x15C
+
+static const u16 drp_addr[25] = { DRP_ADDR_ES_CONTROL,
+                                  DRP_ADDR_ES_HORZ_OFFSET,
+                                  DRP_ADDR_ES_PRESCALE,
+                                  DRP_ADDR_ES_VERT_OFFSET,
+                                  DRP_ADDR_ES_CONTROL_STATUS,
+                                  DRP_ADDR_ES_ERROR_COUNT,
+                                  DRP_ADDR_ES_SAMPLE_COUNT,
+                                  DRP_ADDR_ES_EYESCAN_EN,
+                                  DRP_ADDR_ES_ERRDET_EN,
+                                  DRP_ADDR_ES_SDATA_MASK0,
+                                  DRP_ADDR_ES_SDATA_MASK1,
+                                  DRP_ADDR_ES_SDATA_MASK2,
+                                  DRP_ADDR_ES_SDATA_MASK3,
+                                  DRP_ADDR_ES_SDATA_MASK4,
+                                  DRP_ADDR_ES_QUAL_MASK0,
+                                  DRP_ADDR_ES_QUAL_MASK1,
+                                  DRP_ADDR_ES_QUAL_MASK2,
+                                  DRP_ADDR_ES_QUAL_MASK3,
+                                  DRP_ADDR_ES_QUAL_MASK4,
+                                  DRP_ADDR_PMA_RSV2 ,
+                                  DRP_ADDR_ALIGN_COMMA_WORD ,
+                                  DRP_ADDR_TX_INT_DATAWIDTH ,
+                                  DRP_ADDR_TX_DATA_WIDTH ,
+                                  DRP_ADDR_RX_INT_DATAWIDTH ,
+                                  DRP_ADDR_RX_DATA_WIDTH
+};
+
+//Constants to mask bits of various attributes (for 7 Series GTX transceiver)
+#define DRP_MASK_ES_CONTROL        0xFFC0
+#define DRP_MASK_ES_HORZ_OFFSET    0x0000
+#define DRP_MASK_ES_PRESCALE       0x07FF
+#define DRP_MASK_ES_VERT_OFFSET    0xFE00
+#define DRP_MASK_ES_CONTROL_STATUS 0x0000
+#define DRP_MASK_ES_ERROR_COUNT    0x0000
+#define DRP_MASK_ES_SAMPLE_COUNT   0x0000
+#define DRP_MASK_ES_EYESCAN_EN     0xFEFF
+#define DRP_MASK_ES_ERRDET_EN      0xFDFF
+#define DRP_MASK_ES_SDATA_MASK0    0x0000
+#define DRP_MASK_ES_SDATA_MASK1    0x0000
+#define DRP_MASK_ES_SDATA_MASK2    0x0000
+#define DRP_MASK_ES_SDATA_MASK3    0x0000
+#define DRP_MASK_ES_SDATA_MASK4    0x0000
+#define DRP_MASK_ES_QUAL_MASK0     0x0000
+#define DRP_MASK_ES_QUAL_MASK1     0x0000
+#define DRP_MASK_ES_QUAL_MASK2     0x0000
+#define DRP_MASK_ES_QUAL_MASK3     0x0000
+#define DRP_MASK_ES_QUAL_MASK4     0x0000
+#define DRP_MASK_PMA_RSV2          0x0000
+#define DRP_MASK_ALIGN_COMMA_WORD  0x1FFF
+#define DRP_MASK_TX_INT_DATAWIDTH  0xFFEF
+#define DRP_MASK_TX_DATA_WIDTH     0xFFF8
+#define DRP_MASK_RX_INT_DATAWIDTH  0xBFFF
+#define DRP_MASK_RX_DATA_WIDTH     0xC7FF
+
+static const u16 drp_mask[25] = {DRP_MASK_ES_CONTROL,DRP_MASK_ES_HORZ_OFFSET,DRP_MASK_ES_PRESCALE,DRP_MASK_ES_VERT_OFFSET
+    ,DRP_MASK_ES_CONTROL_STATUS,DRP_MASK_ES_ERROR_COUNT,DRP_MASK_ES_SAMPLE_COUNT
+    ,DRP_MASK_ES_EYESCAN_EN,DRP_MASK_ES_ERRDET_EN
+    ,DRP_MASK_ES_SDATA_MASK0, DRP_MASK_ES_SDATA_MASK1, DRP_MASK_ES_SDATA_MASK2, DRP_MASK_ES_SDATA_MASK3, DRP_MASK_ES_SDATA_MASK4
+    ,DRP_MASK_ES_QUAL_MASK0, DRP_MASK_ES_QUAL_MASK1, DRP_MASK_ES_QUAL_MASK2, DRP_MASK_ES_QUAL_MASK3, DRP_MASK_ES_QUAL_MASK4, DRP_MASK_PMA_RSV2, DRP_MASK_ALIGN_COMMA_WORD, DRP_MASK_TX_INT_DATAWIDTH, DRP_MASK_TX_DATA_WIDTH, DRP_MASK_RX_INT_DATAWIDTH, DRP_MASK_RX_DATA_WIDTH};
+
+//Constants to hold start bit of various attributes (for 7 Series GTX transceiver).  0 corresponds to LSB.
+#define DRP_START_BIT_ES_CONTROL     0
+#define DRP_START_BIT_ES_HORZ_OFFSET 0
+#define DRP_START_BIT_ES_PRESCALE    11
+#define DRP_START_BIT_ES_VERT_OFFSET 0
+#define DRP_START_BIT_ES_CONTROL_STATUS 0
+#define DRP_START_BIT_ES_ERROR_COUNT  0
+#define DRP_START_BIT_ES_SAMPLE_COUNT 0
+#define DRP_START_BIT_ES_EYESCAN_EN  8
+#define DRP_START_BIT_ES_ERRDET_EN   9
+#define DRP_START_BIT_ES_SDATA_MASK0 0
+#define DRP_START_BIT_ES_SDATA_MASK1 0
+#define DRP_START_BIT_ES_SDATA_MASK2 0
+#define DRP_START_BIT_ES_SDATA_MASK3 0
+#define DRP_START_BIT_ES_SDATA_MASK4 0
+#define DRP_START_BIT_ES_QUAL_MASK0  0
+#define DRP_START_BIT_ES_QUAL_MASK1  0
+#define DRP_START_BIT_ES_QUAL_MASK2  0
+#define DRP_START_BIT_ES_QUAL_MASK3  0
+#define DRP_START_BIT_ES_QUAL_MASK4  0
+#define DRP_START_BIT_PMA_RSV2       0
+#define DRP_START_BIT_ALIGN_COMMA_WORD  13
+#define DRP_START_BIT_TX_INT_DATAWIDTH  4
+#define DRP_START_BIT_TX_DATA_WIDTH     0
+#define DRP_START_BIT_RX_INT_DATAWIDTH  14
+#define DRP_START_BIT_RX_DATA_WIDTH     11
+
+static const u16 drp_start_bit[25] = {DRP_START_BIT_ES_CONTROL,DRP_START_BIT_ES_HORZ_OFFSET,DRP_START_BIT_ES_PRESCALE,DRP_START_BIT_ES_VERT_OFFSET
+    ,DRP_START_BIT_ES_CONTROL_STATUS,DRP_START_BIT_ES_ERROR_COUNT,DRP_START_BIT_ES_SAMPLE_COUNT
+    ,DRP_START_BIT_ES_EYESCAN_EN,DRP_START_BIT_ES_ERRDET_EN
+    ,DRP_START_BIT_ES_SDATA_MASK0, DRP_START_BIT_ES_SDATA_MASK1, DRP_START_BIT_ES_SDATA_MASK2, DRP_START_BIT_ES_SDATA_MASK3, DRP_START_BIT_ES_SDATA_MASK4
+    ,DRP_START_BIT_ES_QUAL_MASK0, DRP_START_BIT_ES_QUAL_MASK1, DRP_START_BIT_ES_QUAL_MASK2, DRP_START_BIT_ES_QUAL_MASK3, DRP_START_BIT_ES_QUAL_MASK4
+    ,DRP_START_BIT_PMA_RSV2, DRP_START_BIT_ALIGN_COMMA_WORD, DRP_START_BIT_TX_INT_DATAWIDTH, DRP_START_BIT_TX_DATA_WIDTH, DRP_START_BIT_RX_INT_DATAWIDTH, DRP_START_BIT_RX_DATA_WIDTH};
+
+
+#ifndef DRP_H_
+#define DRP_H_
+
+u16 drp_write (u16 value, u8 pname, u8 lane_num );
+u16 drp_read  (u8 pname, u8 lane_num);
+u32 set_lane_offset (u8* lane_name);
+u16 mask_drp_rddata (u16 value, u8 start_bit, u8 end_bit);
+
+u16 drp_write_raw( u16 value , u16 drp_address , u8 start_bit , u8 end_bit , u8 lane_num );
+u16 drp_read_raw( u16 drp_address , u8 start_bit , u8 end_bit , u8 lane_num );
+
+#endif /* DRP_H_ */

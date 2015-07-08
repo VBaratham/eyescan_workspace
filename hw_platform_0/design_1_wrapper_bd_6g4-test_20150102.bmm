@@ -1,0 +1,29 @@
+// BMM LOC annotation file.
+//
+// Release 2013.2 -  HEAD, build April 01, 2013
+// Copyright (c) 1995-2015 Xilinx, Inc.  All rights reserved.
+
+
+///////////////////////////////////////////////////////////////////////////////
+//
+// Processor 'design_1_i_microblaze_0', ID 100, memory map.
+//
+///////////////////////////////////////////////////////////////////////////////
+
+ADDRESS_MAP design_1_i_microblaze_0 MICROBLAZE-LE 100
+
+    ///////////////////////////////////////////////////////////////////////////////
+    //
+    // Processor 'design_1_i_microblaze_0' address space 'design_1_i_lmb_bram_if_cntlr_0' 0x00000000:0x00001FFF (8 KBytes).
+    //
+    ///////////////////////////////////////////////////////////////////////////////
+
+    ADDRESS_SPACE design_1_i_lmb_bram_if_cntlr_0 RAMB32 [0x00000000:0x00001FFF] design_1_i/lmb_bram_if_cntlr_0
+        BUS_BLOCK
+            design_1_i/blk_mem_gen_0/U0/inst_blk_mem_gen/gnative_mem_map_bmg.native_mem_map_blk_mem_gen/valid.cstr/ramloop[1].ram.r/v6_noinit.ram/WITH_BMM_INFO.TRUE_DP.SIMPLE_PRIM36.TDP_SP36_NO_ECC_ATTR.ram RAMB32 [31:16] [0:2047] PLACED = X9Y27;
+            design_1_i/blk_mem_gen_0/U0/inst_blk_mem_gen/gnative_mem_map_bmg.native_mem_map_blk_mem_gen/valid.cstr/ramloop[0].ram.r/v6_noinit.ram/WITH_BMM_INFO.TRUE_DP.SIMPLE_PRIM36.TDP_SP36_NO_ECC_ATTR.ram RAMB32 [15:0] [0:2047] PLACED = X8Y29;
+        END_BUS_BLOCK;
+    END_ADDRESS_SPACE;
+
+END_ADDRESS_MAP;
+

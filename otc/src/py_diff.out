@@ -1,0 +1,262 @@
+Only in ../Debug/py_scripts/: Vyassa_first_test_1d_20150608
+Only in ../Debug/py_scripts/: Vyassa_first_test_1d_20150608.tar.gz
+Only in ../Debug/py_scripts/: _central_error_plot.py
+Only in ../Debug/py_scripts/: central_error_plot.py
+Binary files /c/Users/LArTest/Desktop/eyescanOTC_20140907/otc/Debug/py_scripts/central_error_plot.pyc and ../Debug/py_scripts/central_error_plot.pyc differ
+diff -bur /c/Users/LArTest/Desktop/eyescanOTC_20140907/otc/Debug/py_scripts/central_error_plot.py~ ../Debug/py_scripts/central_error_plot.py~
+--- /c/Users/LArTest/Desktop/eyescanOTC_20140907/otc/Debug/py_scripts/central_error_plot.py~	Thu Jan 15 14:03:02 2015
++++ ../Debug/py_scripts/central_error_plot.py~	Thu Jan 15 15:04:29 2015
+@@ -48,9 +48,8 @@
+     center_errors = np.array( center_errors )
+ 
+     bins = np.linspace(0, 256, 256)
+-    if not any(center_errors[:,-1] != 0):
+-        return
+     pl.clf()
++    if any(center_errors[:,-1] != 0):
+     pl.hist( center_errors[center_errors[:, -1] != 0][:, -1], bins=bins )
+     pl.xlim(0,256)
+     pl.title(title)
+diff -bur /c/Users/LArTest/Desktop/eyescanOTC_20140907/otc/Debug/py_scripts/run_es_host_pc.py ../Debug/py_scripts/run_es_host_pc.py
+--- /c/Users/LArTest/Desktop/eyescanOTC_20140907/otc/Debug/py_scripts/run_es_host_pc.py	Mon Jan 12 14:01:34 2015
++++ ../Debug/py_scripts/run_es_host_pc.py	Thu Jun 11 16:32:26 2015
+@@ -78,13 +78,17 @@
+ 
+ 
+ 
+-def run_es_host(horz_step = 1, vert_step = 8, max_prescale = 8, datawidth = 32, lpm_mode = 0, rate = 32) :
++def run_es_host(horz_step = 1, vert_step = 8, max_prescale = 8, datawidth = 32, lpm_mode = 0, rate = 32, channels = range(NUMBER_OF_CHANNELS)) :
+     if rate not in valid_rates or datawidth not in valid_widths :
+         return 0
+ 
+     for idx in range(0, NUMBER_OF_CHANNELS) :
++        if idx in channels:
+         print 'Writing settings to channel %d' % idx
+         send_command('esinit %s %d %d %d %d %d %d"' % (idx, max_prescale, horz_step, datawidth, vert_step, lpm_mode, rate))
++        else:
++            print 'Disabling channel %d' % idx
++            send_command('esdisable %s' % idx)
+ 
+     fdbg = open('debug_start.output', 'w')
+     fdbg.write(send_command('dbgeyescan'))
+@@ -127,10 +131,10 @@
+ 
+             continue
+         else :
++            print 'SCAN IS DONE'
+             dumpf = open('all.dump', 'w')
+             send_command('esread all', timeout = 60, outfile = dumpf)
+             dumpf.close()
+-            print 'SCAN IS DONE'
+             send_command('esdone')
+             break
+ 
+@@ -198,7 +202,7 @@
+         print 'pixel %d %d %d %d %d %d %d' % (self.curr_pixel, self.horz_offset, self.vert_offset, self.error_count, self.sample_count, self.prescale, self.ut_sign)
+ 
+ 
+-def process_es_output(horz_step = 1, vert_step = 8, max_prescale = 8, datawidth = 32, lpm_mode = 0, rate = 40, dumpfile = 'all.dump') :
++def process_es_output(horz_step = 1, vert_step = 8, max_prescale = 8, datawidth = 32, lpm_mode = 0, rate = 40, channels = range(NUMBER_OF_CHANNELS), dumpfile = 'all.dump') :
+ 
+     all_lanes = {}
+     for lane in range(0, NUMBER_OF_CHANNELS) :
+@@ -217,7 +221,12 @@
+     asciif = open('ascii_eye.txt', 'w')
+     cerrf = open('center_error.txt', 'w')
+     for lane in range(0, NUMBER_OF_CHANNELS) :
++
+         asciif.write('CHANNEL %d\n' % lane)
++
++        if lane not in channels:
++            cerrf.write("%s 0 -1 0\n" % lane)
++            continue
+ 
+         idx = 0
+ 
+Binary files /c/Users/LArTest/Desktop/eyescanOTC_20140907/otc/Debug/py_scripts/run_es_host_pc.pyc and ../Debug/py_scripts/run_es_host_pc.pyc differ
+Only in ../Debug/py_scripts/: run_es_host_pc.py~
+diff -bur /c/Users/LArTest/Desktop/eyescanOTC_20140907/otc/Debug/py_scripts/run_eyescan.py ../Debug/py_scripts/run_eyescan.py
+--- /c/Users/LArTest/Desktop/eyescanOTC_20140907/otc/Debug/py_scripts/run_eyescan.py	Thu Jan 15 15:54:15 2015
++++ ../Debug/py_scripts/run_eyescan.py	Thu Jun 11 16:33:22 2015
+@@ -4,6 +4,7 @@
+ import os
+ import glob
+ import datetime
++import argparse
+ 
+ remote_user = 'ddboline'
+ remote_system = 'dboline.physics.sunysb.edu'
+@@ -16,11 +17,12 @@
+ def run_command(command) :
+     ''' wrapper around os.system '''
+     if TURN_ON_COMMANDS :
+-        os.system(command)
++        return os.system(command)
+     else :
+         print command
++        return 0
+ 
+-def run_eye_scan(label, scan_type, scan_rate = 32, max_prescale = 8, data_width = 40, lpm_mode = 0) :
++def run_eye_scan(label, scan_type, scan_rate = 32, channels = range(48), max_prescale = 8, data_width = 40, lpm_mode = 0) :
+     '''
+     Run eye scan, taking scan_type and scan_rate as inputs.  Communicate with OTC through network socket.
+     Use either the old tcl scripts, or newly written run_es_host_pc.
+@@ -52,8 +54,8 @@
+         if not os.path.exists('%s/%s' % (PWD, SAMP_NAME)):
+             os.makedirs('%s/%s' % (PWD, SAMP_NAME))
+         os.chdir('%s/%s' % (PWD, SAMP_NAME))
+-        run_es_host(horz_step, vert_step, max_prescale, data_width, lpm_mode, scan_rate)
+-        process_es_output(horz_step, vert_step, max_prescale, data_width, lpm_mode, scan_rate)
++        run_es_host(horz_step, vert_step, max_prescale, data_width, lpm_mode, scan_rate, channels)
++        process_es_output(horz_step, vert_step, max_prescale, data_width, lpm_mode, scan_rate, channels)
+ 
+     run_command('tar zcvf %s.tar.gz *.dump *.csv *.output *.txt' % (SAMP_NAME))
+     run_command('rm *.dump *.csv *.txt *.output')
+@@ -89,7 +91,6 @@
+     central_error_plot.central_error_plot(fname = 'center_error.txt', title = 'Central BER')
+     central_error_plot.central_error_frequency_plot(fname = 'all.dump', title = 'Central Bit Error Frequency')
+     gl = glob.glob('Ch*.csv')
+-    nf = len(gl)
+     for fn in gl :
+         if scan_type == 1 :
+             import bathtub_plot
+@@ -115,11 +116,14 @@
+         run_command('sed -i \'s:TYPE:Bathtub:g\' %s/%s.tex' % (dn, dn))
+     elif scan_type == 2 :
+         run_command('sed -i \'s:TYPE:Eyescan:g\' %s/%s.tex' % (dn, dn))
+-    for idx in range(0, nf) :
++    for idx in range(48) :
+         if not fn2 :
+-            run_command('mv Ch%d.csv.pdf %s/%s_Ch%d.pdf' % (idx, dn, dn, idx))
++            mv_success = run_command('mv Ch%d.csv.pdf %s/%s_Ch%d.pdf' % (idx, dn, dn, idx))
+         else :
+-            run_command('mv Ch%d.csvCh%d.csv.pdf %s/%s_Ch%d.pdf' % (idx, idx, dn, dn, idx))
++            mv_success = run_command('mv Ch%d.csvCh%d.csv.pdf %s/%s_Ch%d.pdf' % (idx, idx, dn, dn, idx))
++        if mv_success != 0:
++            print "No data for channel %s, removing from pdf" % idx
++            run_command('sed -i /Ch%s.pdf/d %s/%s.tex' % (idx, dn, dn))
+     os.chdir('%s' % dn)
+     run_command('pdflatex %s.tex' % dn)
+     run_command('pdflatex %s.tex' % dn)
+@@ -135,25 +139,24 @@
+ 
+ if __name__ == '__main__' :
+     if os.sys.argv[1] == 'esrun' :
+-        scan_type = 1
+-        scan_label = 'default'
+-        scan_rate = 32
+-        if len(os.sys.argv) > 2 :
+-            scan_label = os.sys.argv[2]
+-        if len(os.sys.argv) > 3 :
+-            try :
+-                if int(os.sys.argv[3]) == 2 :
+-                    scan_type = 2
+-            except :
+-                pass
+-        if len(os.sys.argv) > 4 :
+-            try :
+-                scan_rate = int(os.sys.argv[4])
+-            except :
+-                pass
+-        print 'scan will be %d-d, label will be %s, rate will be %d' % (scan_type, scan_label, scan_rate)
++        def int_or_list(x):
++            try:
++                return range(int(x))
++            except ValueError:
++                return [int(num) for num in x.split(',')]
++            return []
++        argparser = argparse.ArgumentParser(description='test')
++        argparser.add_argument('esrun') # Not used, just to consume one arg
++        argparser.add_argument('label')
++        argparser.add_argument('scan_type', type=int, choices=[1, 2], default=1, help="1 = bathtub, 2 = eyescan")
++        argparser.add_argument('--scan_rate', type=int, default=32)
++        argparser.add_argument('--channels', type=int_or_list, default=range(48))
++        argparser.add_argument('--disable-channels', type=int_or_list, default=[])
++        a = argparser.parse_args()
++
++        channels = sorted(set(a.channels) - set(a.disable_channels))
++        exit(run_eye_scan(a.label, a.scan_type, a.scan_rate, channels))
+ 
+-        exit(run_eye_scan(scan_label, scan_type, scan_rate))
+     elif os.sys.argv[1] == 'esplot' :
+         tarfile = None
+         scan_type = 1
+diff -bur /c/Users/LArTest/Desktop/eyescanOTC_20140907/otc/Debug/py_scripts/run_eyescan.py~ ../Debug/py_scripts/run_eyescan.py~
+--- /c/Users/LArTest/Desktop/eyescanOTC_20140907/otc/Debug/py_scripts/run_eyescan.py~	Thu Jan 15 15:30:34 2015
++++ ../Debug/py_scripts/run_eyescan.py~	Wed Jun 10 17:11:45 2015
+@@ -13,12 +13,15 @@
+ USE_PYTHON_CONTROLLER = True
+ IS_THIS_WINDOWS=True
+ 
++INACTIVE_CHANNELS = [4, 5, 6] # Make this a script param? If it's worthwhile
++
+ def run_command(command) :
+     ''' wrapper around os.system '''
+     if TURN_ON_COMMANDS :
+-        os.system(command)
++        return os.system(command)
+     else :
+         print command
++        return 0
+ 
+ def run_eye_scan(label, scan_type, scan_rate = 32, max_prescale = 8, data_width = 40, lpm_mode = 0) :
+     '''
+@@ -49,10 +52,11 @@
+     else :
+         from run_es_host_pc import run_es_host, process_es_output
+ 
++        if not os.path.exists('%s/%s' % (PWD, SAMP_NAME)):
+         os.makedirs('%s/%s' % (PWD, SAMP_NAME))
+         os.chdir('%s/%s' % (PWD, SAMP_NAME))
+-        run_es_host(horz_step, vert_step, max_prescale, data_width, lpm_mode, scan_rate)
+-        process_es_output(horz_step, vert_step, max_prescale, data_width, lpm_mode, scan_rate)
++        run_es_host(horz_step, vert_step, max_prescale, data_width, lpm_mode, scan_rate, INACTIVE_CHANNELS)
++        process_es_output(horz_step, vert_step, max_prescale, data_width, lpm_mode, scan_rate, INACTIVE_CHANNELS)
+ 
+     run_command('tar zcvf %s.tar.gz *.dump *.csv *.output *.txt' % (SAMP_NAME))
+     run_command('rm *.dump *.csv *.txt *.output')
+@@ -72,11 +76,13 @@
+         dn2 = fn2.replace('.tar.gz', '').split('/')[-1]
+         afn2 = os.path.relpath(fn2)
+         run_command('rm -rf %s' % dn2)
++        if not os.path.exists('%s' % dn2):
+         os.makedirs('%s' % dn2)
+         os.chdir(dn2)
+         run_command('tar zxvf ../%s' % afn2)
+         os.chdir('../')
+     run_command('rm -rf %s' % dn)
++    if not os.path.exists('%s' % dn):
+     os.makedirs('%s' % dn)
+     os.chdir(dn)
+     run_command('tar zxvf ../%s' % afn)
+@@ -86,7 +92,6 @@
+     central_error_plot.central_error_plot(fname = 'center_error.txt', title = 'Central BER')
+     central_error_plot.central_error_frequency_plot(fname = 'all.dump', title = 'Central Bit Error Frequency')
+     gl = glob.glob('Ch*.csv')
+-    nf = len(gl)
+     for fn in gl :
+         if scan_type == 1 :
+             import bathtub_plot
+@@ -112,7 +117,7 @@
+         run_command('sed -i \'s:TYPE:Bathtub:g\' %s/%s.tex' % (dn, dn))
+     elif scan_type == 2 :
+         run_command('sed -i \'s:TYPE:Eyescan:g\' %s/%s.tex' % (dn, dn))
+-    for idx in range(0, nf) :
++    for idx in range(48) :
+         if not fn2 :
+             run_command('mv Ch%d.csv.pdf %s/%s_Ch%d.pdf' % (idx, dn, dn, idx))
+         else :
+Only in ../Debug/py_scripts/: shell.py
+Only in ../Debug/py_scripts/: shell.py~
+Only in ../Debug/py_scripts/: vyassa_test_002_1d_20150608
+Only in ../Debug/py_scripts/: vyassa_test_002_1d_20150608.tar.gz
+Only in ../Debug/py_scripts/: vyassa_test_003 1_1d_20150608
+Only in ../Debug/py_scripts/: vyassa_test_003_1d_20150608
+Only in ../Debug/py_scripts/: vyassa_test_003_1d_20150608.tar.gz
+Only in ../Debug/py_scripts/: vyassa_test_003_1d_20150609
+Only in ../Debug/py_scripts/: vyassa_test_003_1d_20150609.tar.gz
+Only in ../Debug/py_scripts/: vyassa_test_004_1d_20150610.tar.gz
+Only in ../Debug/py_scripts/: vyassa_test_004_2d_20150610
+Only in ../Debug/py_scripts/: vyassa_test_004_2d_20150610.tar.gz
+Only in ../Debug/py_scripts/: vyassa_test_005_1d_20150611.tar.gz
+Only in ../Debug/py_scripts/: vyassa_test_006_2d_20150611

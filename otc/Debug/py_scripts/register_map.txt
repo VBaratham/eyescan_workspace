@@ -1,0 +1,238 @@
+ALIGN_COMMA_DOUBLE      0x041   4
+ALIGN_COMMA_ENABLE      0x03E   9 0
+ALIGN_COMMA_WORD        0x041   15 13
+ALIGN_MCOMMA_DET        0x041   6
+ALIGN_MCOMMA_VALUE      0x03F   9 0
+ALIGN_PCOMMA_DET        0x041   7
+ALIGN_PCOMMA_VALUE      0x040   9 0
+CBCC_DATA_SOURCE_SEL    0x052   11
+CHAN_BOND_KEEP_ALIGN    0x04E   15
+CHAN_BOND_MAX_SKEW      0x053   15 12
+CHAN_BOND_SEQ_1_1       0x04C   9 0       
+CHAN_BOND_SEQ_1_2       0x04D   9 0
+CHAN_BOND_SEQ_1_3       0x04E   9 0
+CHAN_BOND_SEQ_1_4       0x04F   9 0
+CHAN_BOND_SEQ_1_ENABLE  0x04C   15 12
+CHAN_BOND_SEQ_2_1       0x050   9 0
+CHAN_BOND_SEQ_2_2       0x051   9 0
+CHAN_BOND_SEQ_2_3       0x052   9 0
+CHAN_BOND_SEQ_2_4       0x053   9 0
+CHAN_BOND_SEQ_2_ENABLE  0x050   15 12
+CHAN_BOND_SEQ_2_USE     0x050   11
+CHAN_BOND_SEQ_LEN       0x04D   15 14
+CLK_CORRECT_USE         0x044   14
+CLK_COR_KEEP_IDLE       0x049   13
+CLK_COR_MAX_LAT         0x045   15 10
+CLK_COR_MIN_LAT         0x046   15 10
+CLK_COR_PRECEDENCE      0x049   12
+CLK_COR_REPEAT_WAIT     0x047   14 10
+CLK_COR_SEQ_1_1         0x044   9 0
+CLK_COR_SEQ_1_2         0x045   9 0
+CLK_COR_SEQ_1_3         0x046   9 0
+CLK_COR_SEQ_1_4         0x047   9 0
+CLK_COR_SEQ_1_ENABLE    0x044   13 10
+CLK_COR_SEQ_2_1         0x048   9 0
+CLK_COR_SEQ_2_2         0x049   9 0
+CLK_COR_SEQ_2_3         0x04A   9 0
+CLK_COR_SEQ_2_4         0x04B   9 0
+CLK_COR_SEQ_2_ENABLE    0x048   13 10
+CLK_COR_SEQ_2_USE       0x048   14       
+CLK_COR_SEQ_LEN         0x049   11 10
+CPLL_CFG                0x05C   15 8 0
+CPLL_CFG                0x05D   15 0 8
+CPLL_FBDIV              0x05E   6 0
+CPLL_FBDIV_45           0x05E   7
+CPLL_INIT_CFG           0x05B   15 0 0
+CPLL_INIT_CFG           0x05C   7 0 16
+CPLL_LOCK_CFG           0x05F   15 0
+CPLL_REFCLK_DIV         0x05E   12 8
+DEC_MCOMMA_DETECT       0x03D   13
+DEC_PCOMMA_DETECT       0x03D   14
+DEC_VALID_COMMA_ONLY    0x03D   12
+DMONITOR_CFG            0x086   15 0 0
+DMONITOR_CFG            0x087   7 0 16
+ES_CONTROL              0x03D   5 0
+ES_CONTROL_STATUS       0x151   3 0
+ES_ERRDET_EN            0x03D   9
+ES_ERROR_COUNT          0x14F   15 0
+ES_EYE_SCAN_EN          0x03D   8
+ES_HORZ_OFFSET          0x03C   11 0
+ES_PMA_CFG              0x0A6   9 0
+ES_PRESCALE             0x03B   15 11
+ES_QUALIFIER            0x02C   15 0 0
+ES_QUALIFIER            0x02D   15 0 16
+ES_QUALIFIER            0x02E   15 0 32
+ES_QUALIFIER            0x02F   15 0 48
+ES_QUALIFIER            0x030   15 0 64
+ES_QUAL_MASK            0x031   15 0 0
+ES_QUAL_MASK            0x032   15 0 16
+ES_QUAL_MASK            0x033   15 0 32
+ES_QUAL_MASK            0x034   15 0 48
+ES_QUAL_MASK            0x035   15 0 64
+ES_RDATA                0x152   15 0 64
+ES_RDATA                0x153   15 0 48
+ES_RDATA                0x154   15 0 32
+ES_RDATA                0x155   15 0 16
+ES_RDATA                0x156   15 0 0
+ES_SAMPLE_COUNT         0x150   15 0 
+ES_SDATA                0x157   15 0 64
+ES_SDATA                0x158   15 0 48
+ES_SDATA                0x159   15 0 32
+ES_SDATA                0x15A   15 0 16
+ES_SDATA                0x15B   15 0 0
+ES_SDATA_MASK           0x036   15 0 0
+ES_SDATA_MASK           0x037   15 0 16
+ES_SDATA_MASK           0x038   15 0 32
+ES_SDATA_MASK           0x039   15 0 48
+ES_SDATA_MASK           0x03A   15 0 64
+ES_VERT_OFFSET          0x03B   8 0
+FTS_DESKEW_SEQ_ENABLE   0x052   15 12
+FTS_LANE_DESKEW_CFG     0x051   15 12
+FTS_LANE_DESKEW_EN      0x051   11
+GEARBOX_MODE            0x01C   2 0
+OUTREFCLK_SEL_INV       0x012   11 10
+PCS_PCIE_EN             0x01B   0
+PCS_RSVD_ATTR           0x06F   15 0
+PD_TRANS_TIME_FROM_P2   0x01B   12 1
+PD_TRANS_TIME_NONE_P2   0x01A   7 0
+PD_TRANS_TIME_TO_P2     0x01A   15 8
+PMA_RSV                 0x099   15 0 0
+PMA_RSV                 0x09A   15 0 16
+PMA_RSV2                0x082   15 0
+PMA_RSV3                0x07C   1 0
+PMA_RSV4                0x091   15 0 0
+PMA_RSV4                0x092   15 0 16
+RXBUFRESET_TIME         0x00D   4 0
+RXBUF_ADDR_MODE         0x09D   7
+RXBUF_EIDLE_HI_CNT      0x09D   15 12
+RXBUF_EIDLE_LO_CNT      0x09D   11 8
+RXBUF_EN                0x09D   1
+RXBUF_RESET_ON_CB_CHANGE    0x09D   5
+RXBUF_RESET_ON_COMMAALIGN   0x09D   3
+RXBUF_RESET_ON_EIDLE        0x09D   6
+RXBUF_RESET_ON_RATE_CHANGE  0x09D   4
+RXBUF_THRESH_OVFLW          0x09C   13 8
+RXBUF_THRESH_OVRD           0x09D   2
+RXBUF_THRESH_UNDFLW         0x09C   5 0
+RXCDRFREQRESET_TIME         0x00D   9 5
+RXCDRPHRESET_TIME           0x00D   14 10
+RXCDR_CFG                   0x0A8   15 0 0
+RXCDR_CFG                   0x0A9   15 0 16
+RXCDR_CFG                   0x0AA   15 0 32
+RXCDR_CFG                   0x0AB   15 0 48
+RXCDR_CFG                   0x0AC   15 0 64
+RXCDR_FR_RESET_ON_EIDLE     0x0A7   12
+RXCDR_HOLD_DURING_EIDLE     0x0A7   11
+RXCDR_LOCK_CFG              0x0A7   5 0
+RXCDR_PH_RESET_ON_EIDLE     0x0A7   13
+RXDFELPMRESET_TIME          0x00D   15 15 0
+RXDFELPMRESET_TIME          0x00E   5 0 1
+RXDLY_CFG                   0x055   15 0
+RXDLY_LCFG                  0x0A0   8 0
+RXDLY_TAP_CFG               0x054   15 0
+RXGEARBOX_EN                0x04B   15
+RXISCANRESET_TIME           0x00F   14 10
+RXLPM_HF_CFG                0x02A   13 0
+RXLPM_LF_CFG                0x02B   13 0
+RXOOB_CFG                   0x012   6 0
+RXOUT_DIV                   0x088   2 0
+RXPCSRESET_TIME             0x00E   15 11
+RXPHDLY_CFG                 0x0A3   15 0 0
+RXPHDLY_CFG                 0x0A4   7 0 16
+RXPH_CFG                    0x0A2   7 0
+RXPH_MONITOR_SEL            0x057   12 8
+RXPMARESET_TIME             0x00E   10 6
+RXPRBS_ERR_LOOPBACK         0x011   0
+RXSLIDE_AUTO_WAIT           0x041   3 0
+RXSLIDE_MODE                0x040   15 14
+RX_BIAS_CFG                 0x066   11 0
+RX_BUFFER_CFG               0x09B   5 0
+RX_CLK25_DIV                0x011   10 6
+RX_CLKMUX_PD                0x068   0
+RX_CM_SEL                   0x011   5 4
+RX_CM_TRIM                  0x011   3 1
+RX_DATA_WIDTH               0x011   13 11
+RX_DDI_SEL                  0x057   5 0
+RX_DEBUG_CFG                0x0A5   11 0
+RX_DEFER_RESET_BUF_EN       0x09D   0
+RX_DFE_GAIN_CFG             0x01D   15 0 0
+RX_DFE_GAIN_CFG             0x01E   6 0 16
+RX_DFE_H2_CFG               0x01F   11 0
+RX_DFE_H3_CFG               0x020   11 0
+RX_DFE_H4_CFG               0x021   10 0
+RX_DFE_H5_CFG               0x022   10 0
+RX_DFE_KL_CFG               0x023   12 0
+RX_DFE_KL_CFG2              0x074   15 11 4
+RX_DFE_KL_CFG2              0x074   3 0 0
+RX_DFE_KL_CFG2              0x07F   14 10 13
+RX_DFE_KL_CFG2              0x07F   3 0 9
+RX_DFE_KL_CFG2              0x083   15 7 18
+RX_DFE_KL_CFG2              0x08C   7 3 27
+RX_DFE_LPM_CFG              0x029   15 0
+RX_DFE_LPM_HOLD_DURING_EIDLE    0x01E   14
+RX_DFE_UT_CFG               0x024   15 15 0
+RX_DFE_UT_CFG               0x025   15 0 1
+RX_DFE_VP_CFG               0x026   15 0
+RX_DFE_XYD_CFG              0x028   12 0
+RX_DISPERR_SEQ_MATCH        0x03D   15
+RX_INT_DATAWIDTH            0x011   14
+RX_OS_CFG                   0x024   12 0
+RX_SIG_VALID_DLY            0x041   12 8
+RX_XCLK_SEL                 0x059   6
+SAS_MAX_COM                 0x015   12 6
+SAS_MIN_COM                 0x013   14 9
+SATA_BURST_SEQ_LEN          0x012   15 12
+SATA_BURST_VAL              0x012   9 7
+SATA_CPLL_CFG               0x05E   15 14
+SATA_EIDLE_VAL              0x013   2 0
+SATA_MAX_BURST              0x015   5 0
+SATA_MAX_INIT               0x016   5 0
+SATA_MAX_WAKE               0x016   11 6
+SATA_MIN_BURST              0x013   8 3
+SATA_MIN_INIT               0x014   5 0
+SATA_MIN_WAKE               0x014   11 6
+SHOW_REALIGN_COMMA          0x041   5
+TERM_RCAL_CFG               0x069   4 0
+TERM_RCAL_OVRD              0x069   8
+TRANS_TIME_RATE             0x018   7 0
+TST_RSV                     0x097   15 0 0
+TST_RSV                     0x098   15 0 16
+TXBUF_EN                    0x01C   14
+TXBUF_RESET_ON_RATE_CHANGE  0x01C   15
+TXDLY_CFG                   0x062   15 0
+TXDLY_LCFG                  0x09F   8 0
+TXDLY_TAP_CFG               0x063   15 0
+TXGEARBOX_EN                0x01C   5
+TXOUT_DIV                   0x088   6 4
+TXPCSRESET_TIME             0x00F   9 5
+TXPHDLY_CFG                 0x060   15 0 0
+TXPHDLY_CFG                 0x061   7 0 16
+TXPH_CFG                    0x064   15 0
+TXPH_MONITOR_SEL            0x065   12 8
+TXPMARESET_TIME             0x00F   4 0
+TX_CLK25_DIV                0x06A   4 0
+TX_DATA_WIDTH               0x06B   2 0
+TX_DEEMPH0                  0x07A   4 0
+TX_DEEMPH1                  0x07A   12 8
+TX_DRIVE_MODE               0x019   4 0
+TX_EIDLE_ASSERT_DELAY       0x019   8 6
+TX_EIDLE_DEASSERT_DELAY     0x019   11 9
+TX_INT_DATAWIDTH            0x06B   4
+TX_LOOPBACK_DRIVE_HIZ       0x019   5
+TX_MAINCURSOR_SEL           0x07C   3
+TX_MARGIN_FULL_0            0x075   6 0
+TX_MARGIN_FULL_1            0x075   14 8
+TX_MARGIN_FULL_2            0x076   6 0
+TX_MARGIN_FULL_3            0x076   14 8
+TX_MARGIN_FULL_4            0x077   6 0
+TX_MARGIN_LOW_0             0x077   14 8
+TX_MARGIN_LOW_1             0x078   6 0
+TX_MARGIN_LOW_2             0x078   14 8
+TX_MARGIN_LOW_3             0x079   6 0
+TX_MARGIN_LOW_4             0x079   14 8
+TX_PREDRIVER_MODE           0x019   12
+TX_QPI_STATUS_EN            0x06B   15
+TX_RXDETECT_CFG             0x07D   13 0
+TX_RXDETECT_REF             0x07C   10 8
+TX_XCLK_SEL                 0x059   7
+UCODEER_CLR                 0x000   1

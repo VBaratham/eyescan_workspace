@@ -1,0 +1,229 @@
+diff -bur /c/Users/LArTest/Desktop/eyescanOTC_20140907/otc/src/es_controller.c ./es_controller.c
+--- /c/Users/LArTest/Desktop/eyescanOTC_20140907/otc/src/es_controller.c	Wed Jan 14 10:18:57 2015
++++ ./es_controller.c	Thu Jun 11 14:44:47 2015
+@@ -280,26 +280,9 @@
+ #endif
+ 
+     if( DEBUG ) xil_printf( "do resets\n");
+-//     xaxi_eyescan_write_channel_reg(curr_lane, XAXI_EYESCAN_TXCFG, 1 );
+-//     xaxi_eyescan_write_channel_reg(curr_lane, XAXI_EYESCAN_RXCFG, 1 );
+     xaxi_eyescan_write_channel_reg(curr_lane, XAXI_EYESCAN_TXCFG, 1 | ( 1 << 8 ) );
+     xaxi_eyescan_write_channel_reg(curr_lane, XAXI_EYESCAN_RXCFG, 1 | ( 1 << 8 ) );
+-
+-    //u32 chan_resets[4] = { 0xF00 , 0x20 , 0x10 , 0xc0 };
+-    u32 chan_resets[4] = { 0xF00 , 0x20 , 0x10 , 0x0 };
+-    for( i=0 ; i<4 ; i++ ) {
+-    	xaxi_eyescan_write_channel_reg(curr_lane, XAXI_EYESCAN_RESET, chan_resets[i] );
+-    	xaxi_eyescan_write_channel_reg(curr_lane, XAXI_EYESCAN_RESET, 0);
+-    }
+-
+-    sleep(100);
+-    u32 reset_val = xaxi_eyescan_read_channel_reg(curr_lane,XAXI_EYESCAN_RESET);
+-    i=0;
+-    while( reset_val != 0x0000000F && i < 5 ) {
+-        xil_printf("Channel %d: Reset register(init): %08x\n",curr_lane,reset_val);
+-        sleep(100);
+-        i++;
+-    }
++    xaxi_eyescan_reset_channel(curr_lane);
+ 
+ #if DEBUG
+     u32 txuserready = xaxi_eyescan_read_channel_reg( curr_lane , XAXI_EYESCAN_TXCFG );
+@@ -356,6 +339,11 @@
+         memset( eye_scan_lanes[curr_lane] , 0 , sizeof(eye_scan) );
+         init_eye_scan_struct( eye_scan_lanes[curr_lane] );
+     }
++
++    // Turn off all channels
++    u32 i;
++    for (i = 0; i < n_gtx; ++i)
++    	xaxi_eyescan_disable_channel(i);
+ 
+     if( DEBUG ) xil_printf( "memory initialized\n");
+ 
+diff -bur /c/Users/LArTest/Desktop/eyescanOTC_20140907/otc/src/es_interface.c ./es_interface.c
+--- /c/Users/LArTest/Desktop/eyescanOTC_20140907/otc/src/es_interface.c	Wed Nov 12 14:57:00 2014
++++ ./es_interface.c	Thu Jun 11 15:38:11 2015
+@@ -17,6 +17,8 @@
+ #include "es_controller.h"
+ #include "SysStatus.h"
+ 
++#include "xaxi_eyescan.h"
++
+ #ifdef IS_OTC_BOARD
+ #include "otcLib/uPod.h"
+ #endif
+@@ -40,6 +42,7 @@
+ 
+     char input_buf[RECV_BUF_SIZE+1];
+ 
++    // Copy the data into 'input_buf'
+     memset( input_buf , 0 , RECV_BUF_SIZE+1 );
+     strncpy( input_buf , data , size );
+ 
+@@ -68,6 +71,7 @@
+         memset( tokens[idx] , 0 , 20 );
+     }
+ 
++    // tokenize (strtok) the input and store in tokens[]
+     temp_str = strtok( input_buf , " " );
+     int number_tokens = 0;
+     while( temp_str != NULL ) {
+@@ -76,6 +80,7 @@
+         temp_str = strtok( NULL , " {},\r\n");
+     }
+ 
++    // identify the command
+     for( idx = 0 ; idx < NTELNETCOMMANDS ; ++idx ) {
+         if( !strncmp( commands[idx] , tokens[0] , strlen(commands[idx]) ) )
+             command_type = idx;
+@@ -95,6 +100,7 @@
+         }
+ 
+         int curr_lane = strtoul( tokens[1] , pEnd , 0);
++        xaxi_eyescan_enable_channel(curr_lane);
+         eyescan_lock();
+         eye_scan * curr_eyescan = get_eye_scan_lane( curr_lane );
+         if( curr_eyescan == NULL ) {
+@@ -229,9 +235,15 @@
+             global_upload_unrdy();
+             return 0;
+         }
++
++        // Disable the eyescan
+         int curr_lane = strtoul( tokens[1] , pEnd , 0);
+         eye_scan * curr_eyescan = get_eye_scan_lane( curr_lane );
+         curr_eyescan->enable = FALSE;
++
++        // Turn off the GTX for this channel
++        xaxi_eyescan_disable_channel(curr_lane);
++
+         return 0;
+     }
+ 
+diff -bur /c/Users/LArTest/Desktop/eyescanOTC_20140907/otc/src/xaxi_eyescan.c ./xaxi_eyescan.c
+--- /c/Users/LArTest/Desktop/eyescanOTC_20140907/otc/src/xaxi_eyescan.c	Wed Nov 12 14:57:00 2014
++++ ./xaxi_eyescan.c	Thu Jun 11 14:47:09 2015
+@@ -10,7 +10,7 @@
+  *-   Created  27-APR-2014   John D. Hobbs
+  *- $Revision: $
+  *-
+-*/
++ */
+ 
+ #include "assert.h"
+ #include "xbasic_types.h"
+@@ -94,13 +94,95 @@
+ 
+ /* The channel DRP routines.  These are the workhorse routines. */
+ u32 xaxi_eyescan_read_channel_drp(u32 chanIdx, u32 drpOffset) {
++	if (xaxi_eyescan_channel_active(chanIdx)){
+     u32 *address = make_channel_drp_address(chanIdx, drpOffset);
+     return xaxi_eyescan_read(address);
++	}
++	return 0;
+ }
+ 
+ void xaxi_eyescan_write_channel_drp(u32 chanIdx, u32 drpOffset, u32 value) {
++	if (xaxi_eyescan_channel_active(chanIdx)){
+     u32 *address = make_channel_drp_address(chanIdx, drpOffset);
+     return xaxi_eyescan_write(address,value);
++	}
++}
++
++/* ------------------------------------------------------------------------
++ * Non IO routines
++ * ------------------------------------------------------------------------*/
++
++int xaxi_eyescan_channel_tx_active(u32 chanIdx){
++	return !(xaxi_eyescan_read_channel_reg(chanIdx, XAXI_EYESCAN_TXCFG) & 0x6);
++}
++
++int xaxi_eyescan_channel_rx_active(u32 chanIdx){
++	return !(xaxi_eyescan_read_channel_reg(chanIdx, XAXI_EYESCAN_RXCFG) & 0x6);
++}
++
++int xaxi_eyescan_channel_active(u32 chanIdx){
++	return ( xaxi_eyescan_channel_tx_active(chanIdx) && xaxi_eyescan_channel_rx_active(chanIdx) );
++}
++
++// Could separate these routines by tx/rx
++
++void xaxi_eyescan_reset_channel(u32 chanIdx){
++	// NB: will not work for reset after RX powerdown, since rxresetdone does not come on
++
++	// trigger the reset
++	xaxi_eyescan_write_channel_reg(chanIdx, XAXI_EYESCAN_RESET, 0x30);
++	xaxi_eyescan_write_channel_reg(chanIdx, XAXI_EYESCAN_RESET, 0);
++
++	// wait for 4 done bits
++	u32 reset_reg;
++	while ( (reset_reg = xaxi_eyescan_read_channel_reg(chanIdx, XAXI_EYESCAN_RESET)) != 0xF){
++		xil_printf("Waiting for channel %d GTX reset=0xF. Reset: %d \n", chanIdx, reset_reg);
++		sleep(10);
++	}
++}
++
++void xaxi_eyescan_reset_channel_after_rx_powerdown(u32 chanIdx){
++	// trigger the reset
++	xaxi_eyescan_write_channel_reg(chanIdx, XAXI_EYESCAN_RESET, 0x30);
++	xaxi_eyescan_write_channel_reg(chanIdx, XAXI_EYESCAN_RESET, 0);
++
++	// wait for 3 done bits - bit [2], rx reset done, does not come on because RX uses a recovered clock which does not work if the GTX has no incoming data
++	u32 reset_reg;
++	while ( (reset_reg = xaxi_eyescan_read_channel_reg(chanIdx, XAXI_EYESCAN_RESET)) != 0xB){
++		xil_printf("Waiting for channel %d GTX reset=0xB. Reset: %d \n", chanIdx, reset_reg);
++		sleep(10);
++	}
++}
++
++void xaxi_eyescan_enable_channel(u32 chanIdx){
++	if (xaxi_eyescan_channel_active(chanIdx))
++		return;
++
++	u32 old_txcfg = xaxi_eyescan_read_channel_reg(chanIdx, XAXI_EYESCAN_TXCFG);
++	u32 old_rxcfg = xaxi_eyescan_read_channel_reg(chanIdx, XAXI_EYESCAN_RXCFG);
++
++	// Clear the power down bits
++	xaxi_eyescan_write_channel_reg(chanIdx, XAXI_EYESCAN_TXCFG, old_txcfg & ~0x6);
++	xaxi_eyescan_write_channel_reg(chanIdx, XAXI_EYESCAN_RXCFG, old_rxcfg & ~0x6);
++
++	// Reset the channel so it resamples the powerdown bits
++	xaxi_eyescan_reset_channel(chanIdx);
++}
++
++void xaxi_eyescan_disable_channel(u32 chanIdx){
++	if (!xaxi_eyescan_channel_active(chanIdx))
++		return;
++
++	u32 old_txcfg = xaxi_eyescan_read_channel_reg(chanIdx, XAXI_EYESCAN_TXCFG);
++	u32 old_rxcfg = xaxi_eyescan_read_channel_reg(chanIdx, XAXI_EYESCAN_RXCFG);
++
++	// Set the power down bits (and the usrrdy bits)
++	xaxi_eyescan_write_channel_reg(chanIdx, XAXI_EYESCAN_TXCFG, old_txcfg | 0x7);
++	xaxi_eyescan_write_channel_reg(chanIdx, XAXI_EYESCAN_RXCFG, old_rxcfg | 0x7);
++
++	// Reset the channel so it resamples the powerdown bits
++	xaxi_eyescan_reset_channel_after_rx_powerdown(chanIdx);
+ }
+ 
+ /* ------------------------------------------------------------------------
+diff -bur /c/Users/LArTest/Desktop/eyescanOTC_20140907/otc/src/xaxi_eyescan.h ./xaxi_eyescan.h
+--- /c/Users/LArTest/Desktop/eyescanOTC_20140907/otc/src/xaxi_eyescan.h	Wed Nov 12 14:57:00 2014
++++ ./xaxi_eyescan.h	Wed Jun 10 18:23:34 2015
+@@ -74,6 +74,15 @@
+ u32 xaxi_eyescan_read_channel_drp(u32 chanIdx, u32 drpOffset);
+ void xaxi_eyescan_write_channel_drp(u32 chanIdx, u32 drpOffset, u32 value);
+ 
++/* Non-IO routies */
++int xaxi_eyescan_channel_tx_active(u32 chanIdx);
++int xaxi_eyescan_channel_rx_active(u32 chanIdx);
++int xaxi_eyescan_channel_active(u32 chanIdx);
++void xaxi_eyescan_reset_channel(u32 chanIdx);
++void xaxi_eyescan_reset_channel_after_rx_powerdown(u32 chanIdx);
++void xaxi_eyescan_enable_channel(u32 chanIdx);
++void xaxi_eyescan_disable_channel(u32 chanIdx);
++
+ /* Low level I/O routines.  Ultimately these always end up being called. */
+ u32 xaxi_eyescan_read(u32 *address);
+ void xaxi_eyescan_write(u32 *address, u32 value);
