@@ -134,7 +134,7 @@ void generate_ber_table(FILE * stream, int ch_to_display) {
 
 	int i;
 	for (i = 0; i < 48; ++i) {
-		// DEBUG
+		// DEBUG (remove)
 		if (i < 12)
 			xaxi_eyescan_enable_channel((u32) i);
 		//END DEBUG
@@ -169,7 +169,7 @@ void generate_eyescan_table(FILE * stream, int ch) {
 	eye_scan * eslane = get_eye_scan_lane(ch);
 	int i;
 	for(i = 0; i < sizeof(eslane->pixels)/sizeof(eye_scan_pixel*); ++i)
-		xil_printf("ho: %d, vo: %d", eslane->pixels[i].h_offset, eslane->pixels[i].v_offset);
+		xil_printf("ho: %d, vo: %d\n", eslane->pixels[i].h_offset, eslane->pixels[i].v_offset);
 }
 
 int parse_channel(char* req) {
@@ -232,7 +232,7 @@ int do_http_get(int sd, char *req, int rlen) {
 		int ch_to_display = parse_channel(req);
 		generate_ber_table(stream, ch_to_display);
 		fprintf(stream, "<br><br>\n");
-		fprintf(stream, "<form action=\"\" method=\"get\"> View Channel: <input type=\"text\" size=3 name=\"ch\"> <input type=\"submit\" value=\"Submit\"><br>");
+		fprintf(stream, "<form action=\"\" method=\"get\"> View Channel: <input type=\"text\" size=3 name=\"ch\" value=\"%d\"> <input type=\"submit\" value=\"Submit\"><br>", ch_to_display);
 		fprintf(stream, "<br><br>\n");
 		generate_eyescan_table(stream, ch_to_display);
 		fprintf(stream, "<HR>\n");
