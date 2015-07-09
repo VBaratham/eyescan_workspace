@@ -17,6 +17,7 @@
  */
 
 #include <string.h>
+#include <math.h>
 
 /*JDH #include "mfs_config.h" */
 #include "lwip/inet.h"
@@ -134,14 +135,11 @@ void generate_ber_table(FILE * stream, int ch_to_display) {
 
 	int i;
 	for (i = 0; i < 48; ++i) {
-		// DEBUG (remove)
-		if (i < 12)
-			xaxi_eyescan_enable_channel((u32) i);
-		//END DEBUG
 		if (xaxi_eyescan_channel_active((u32) i)) {
 			eye_scan * eye_struct = get_eye_scan_lane(i);
 			eye_scan_pixel * eye_pixel = eye_struct->pixels;
-			int error_count = eye_pixel->center_error;
+			//			int error_count = eye_pixel->center_error;
+			int error_count = drp_read_raw( DRP_RX_PRBS_ERR_CNT , 0 , 15 , eye_struct->lane_number );
 			u16 samp = eye_pixel->sample_count;
 			u8 prescale = eye_pixel->prescale;
 			int sample_count = samp * 32 << (1 + prescale);
@@ -154,10 +152,38 @@ void generate_ber_table(FILE * stream, int ch_to_display) {
 					"<td>%d</td>"
 					"</tr>\n",
 					i, error_count, sample_count);
+		} else {
+			fprintf(stream, "<tr style=\"color: Red;\">");
+			fprintf(stream, "<td>%d (inactive)</td></tr>\n", i);
 		}
 	}
 
 	fprintf(stream, "</TABLE>\n");
+}
+
+int get_v_offset(eye_scan_pixel * px) {
+	int to_return = abs(px->v_offset) + px->ut_sign * 256; //256 = 2^8 ut_sign is bit[8]
+	if(px->v_offset < 0) {
+		to_return = to_return + 128;//128=2^7 sign is bit [7]
+	}
+	return to_return;
+}
+
+int comp_pixel_coords(const void *p1, const void *p2) {
+	eye_scan_pixel *px1 = (eye_scan_pixel *) p1;
+	eye_scan_pixel *px2 = (eye_scan_pixel *) p2;
+
+	if (get_v_offset(px1) < get_v_offset(px2))
+		return -1;
+	if (get_v_offset(px1) > get_v_offset(px2))
+		return 1;
+
+	if (px1->h_offset < px2->h_offset)
+		return -1;
+	if (px1->h_offset > px2->h_offset)
+		return 1;
+
+	return 0;
 }
 
 void generate_eyescan_table(FILE * stream, int ch) {
@@ -167,9 +193,37 @@ void generate_eyescan_table(FILE * stream, int ch) {
 	}
 
 	eye_scan * eslane = get_eye_scan_lane(ch);
-	int i;
-	for(i = 0; i < sizeof(eslane->pixels)/sizeof(eye_scan_pixel*); ++i)
-		xil_printf("ho: %d, vo: %d\n", eslane->pixels[i].h_offset, eslane->pixels[i].v_offset);
+	int num_valid_px = eslane->pixel_count; // Store this instead of accessing eslane->pixel_count, which may change
+
+	// Sort the pixels in this lane first by vert offset (row), then by horz offset (col)
+	eye_scan_pixel * pixels = malloc(sizeof(eye_scan_pixel) * num_valid_px); //or NUM_PIXELS_TOTAL?
+	memcpy(pixels, eslane->pixels, sizeof(eye_scan_pixel) * num_valid_px);
+	qsort(pixels, num_valid_px, sizeof(eye_scan_pixel), &comp_pixel_coords);
+
+	// Write the table by looping over this sorted list of pixels
+	fprintf(stream, "<TABLE>\n<tr>\n");
+	int i, prev_v_offset = -1;
+	for(i = 0; i < num_valid_px; ++i) {
+		int error_count = (pixels[i].error_count == 0 ? 1 : pixels[i].error_count);
+		int sample_count = pixels[i].sample_count * 32 << (1 + pixels[i].prescale);
+		double ber = ((double) error_count) / ((double) sample_count);
+		double MAX_BER = .1; //this is the value that will render as color = #FFFFFF
+		u32 color = 120 * (1 - log10(MAX_BER) / log10(ber));
+		int v_offset = get_v_offset(&pixels[i]);
+
+		// End the row and start a new one if necessary
+		if(v_offset != prev_v_offset && prev_v_offset != -1)
+			fprintf(stream, "</tr>\n<tr>");
+		prev_v_offset = v_offset;
+
+		//		fprintf(stream, "vo: %d, ho: %d, ut_sign: %d. errcnt: %d, sampcnt: %d, center_error: %d<br>\n", v_offset, pixels[i].h_offset, pixels[i].ut_sign, pixels[i].error_count, sample_count, pixels[i].center_error);
+		//		fprintf(stream, "vo: %d, ho: %d, BER:%.3e<br>\n", v_offset, pixels[i].h_offset, ber);
+		fprintf(stream, "<td style=\"color:hsl(%d, 100%%, 50%%)\">%.2e <br> <text style=\"font-size:10px\"> (%d, %d) </text> </td>", color, ber, v_offset, pixels[i].h_offset);
+	}
+	fprintf(stream, "</tr>\n");
+	fprintf(stream, "</TABLE>\n");
+
+	free(pixels);
 }
 
 int parse_channel(char* req) {
@@ -227,23 +281,21 @@ int do_http_get(int sd, char *req, int rlen) {
 	/* *******************
 	 * Bit error rates
 	 * *******************/
-	//	eyescan_lock();
-		fprintf(stream, "<CENTER><B>Eyescan Data</B></CENTER><BR>\n");
-		int ch_to_display = parse_channel(req);
-		generate_ber_table(stream, ch_to_display);
-		fprintf(stream, "<br><br>\n");
-		fprintf(stream, "<form action=\"\" method=\"get\"> View Channel: <input type=\"text\" size=3 name=\"ch\" value=\"%d\"> <input type=\"submit\" value=\"Submit\"><br>", ch_to_display);
-		fprintf(stream, "<br><br>\n");
-		generate_eyescan_table(stream, ch_to_display);
-		fprintf(stream, "<HR>\n");
-	//	eyescan_unlock();
+	fprintf(stream, "<CENTER><B>Eyescan Data</B></CENTER><BR>\n");
+	int ch_to_display = parse_channel(req);
+	generate_ber_table(stream, ch_to_display);
+	fprintf(stream, "<br><br>\n");
+	fprintf(stream, "<form action=\"\" method=\"get\"> View Channel: <input type=\"text\" size=3 name=\"ch\" value=\"%d\"> <input type=\"submit\" value=\"Submit\"><br>", ch_to_display);
+	fprintf(stream, "<br><br>\n");
+	generate_eyescan_table(stream, ch_to_display);
+	fprintf(stream, "<HR>\n");
 
 	/* ***********************
 	 * Close HTML, send data
 	 * ***********************/
 	fprintf(stream,"</BODY>\n</HTML>\n");
 	fflush(stream);
-//	xil_printf("%s\n", response); //DEBUG
+	//	xil_printf("%s\n", response); //DEBUG
 	int w;
 	if ((w = lwip_write(sd, response, response_size)) < 0 ) {
 		xil_printf("error writing web page to socket\r\n");

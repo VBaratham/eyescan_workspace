@@ -57,7 +57,7 @@ typedef struct {
     u16 data_width;         //Data width
 
     //Eye scan data:
-    eye_scan_pixel * pixels; // array of pointers, allocate memory for each pixel as required
+    eye_scan_pixel * pixels; // array of pointers, allocate memory for each pixel as required (I think this comment is wrong: it's an array of structs, and memory is allocated for all pixels at once -VB 7/8/2015)
     s16 horz_offset;        //Horizontal offset for current pixel
     s16 vert_offset;        //Vertical offset for current pixel
     s16 ut_sign;            //UT sign for current pixel
