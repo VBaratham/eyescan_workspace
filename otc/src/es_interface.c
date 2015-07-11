@@ -23,7 +23,7 @@
 #include "otcLib/uPod.h"
 #endif
 
-#define NTELNETCOMMANDS 15
+#define NTELNETCOMMANDS 16
 #define NTELNETTOKENS 20
 #define RECV_BUF_SIZE 2048
 
@@ -46,7 +46,7 @@ int es_interface(int s, const void *data, size_t size) {
     memset( input_buf , 0 , RECV_BUF_SIZE+1 );
     strncpy( input_buf , data , size );
 
-    char *commands[NTELNETCOMMANDS] = { "esinit" , "esread" , "esdone" , "esdisable" , "mwr" , "mrd" , "debug" , \
+    char *commands[NTELNETCOMMANDS] = { "esinit" , "esread" , "esdone" , "esdisable" , "es_err_inj" , "mwr" , "mrd" , "debug" , \
             "dbgeyescan" , "initclk" , "readclk" , "printupod" , "iicr" , "iicw" , "printtemp" , "globalinit"
     };
 
@@ -61,8 +61,8 @@ int es_interface(int s, const void *data, size_t size) {
     }
 
     char * temp_str , ** pEnd = NULL;
-    typedef enum { ESINIT = 0 , ESREAD = 1 , ESDONE = 2 , ESDISABLE = 3 , MWR = 4 , MRD = 5 , DEBUG = 6 , \
-        DBGEYESCAN = 7 , INITCLK = 8 , READCLK = 9 , PRINTUPOD = 10 , IICR = 11 , IICW = 12 , PRINTTEMP = 13 , GLOBALINIT = 14
+    typedef enum { ESINIT = 0 , ESREAD = 1 , ESDONE = 2 , ESDISABLE = 3 , ES_ERR_INJ = 4 , MWR = 5 , MRD = 6 , DEBUG = 7 , \
+        DBGEYESCAN = 8 , INITCLK = 9 , READCLK = 10 , PRINTUPOD = 11 , IICR = 12 , IICW = 13 , PRINTTEMP = 14 , GLOBALINIT = 15
     } command_type_t;
     command_type_t command_type = MWR;
 
@@ -243,6 +243,26 @@ int es_interface(int s, const void *data, size_t size) {
 
         // Turn off the GTX for this channel
         xaxi_eyescan_disable_channel(curr_lane);
+
+        return 0;
+    }
+
+    if( command_type == ES_ERR_INJ ) {
+        if( number_tokens != 2 ) {
+            memset( input_buf , 0 , RECV_BUF_SIZE+1 );
+            safe_sprintf( input_buf , "Syntax: esdisable <lane> \r\n");
+            return safe_send( s , input_buf );
+        }
+        if( !strncmp( "all" , tokens[1] , 3 ) ) {
+            u32 i;
+            for (i = 0; i < 48; ++i)
+            	xaxi_eyescan_error_inject(i);
+            return 0;
+        }
+
+        // Disable the eyescan
+        int curr_lane = strtoul( tokens[1] , pEnd , 0);
+        xaxi_eyescan_error_inject(curr_lane);
 
         return 0;
     }

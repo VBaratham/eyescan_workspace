@@ -184,6 +184,16 @@ void xaxi_eyescan_disable_channel(u32 chanIdx){
 	xaxi_eyescan_reset_channel_after_rx_powerdown(chanIdx);
 }
 
+void xaxi_eyescan_error_inject(u32 chanIdx) {
+	xil_printf("injecting errors ch %d\n", chanIdx);
+	u32 old_txcfg = xaxi_eyescan_read_channel_reg(chanIdx, XAXI_EYESCAN_TXCFG);
+	xil_printf("before, txcfg = 0x%X\n", old_txcfg);
+	xaxi_eyescan_write_channel_reg(chanIdx, XAXI_EYESCAN_TXCFG, old_txcfg | (0x1 << 11));
+	xil_printf("during, txcfg = 0x%X\n", xaxi_eyescan_read_channel_reg(chanIdx, XAXI_EYESCAN_TXCFG));
+	xaxi_eyescan_write_channel_reg(chanIdx, XAXI_EYESCAN_TXCFG, old_txcfg);
+	xil_printf("after, txcfg = 0x%X\n", xaxi_eyescan_read_channel_reg(chanIdx, XAXI_EYESCAN_TXCFG));
+}
+
 /* ------------------------------------------------------------------------
  * The following two routines are the fundamental I/O routines which always
  * should eventually get called.

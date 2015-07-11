@@ -82,6 +82,7 @@ void xaxi_eyescan_reset_channel(u32 chanIdx);
 void xaxi_eyescan_reset_channel_after_rx_powerdown(u32 chanIdx);
 void xaxi_eyescan_enable_channel(u32 chanIdx);
 void xaxi_eyescan_disable_channel(u32 chanIdx);
+void xaxi_eyescan_error_inject(u32 chanIdx);
 
 /* Low level I/O routines.  Ultimately these always end up being called. */
 u32 xaxi_eyescan_read(u32 *address);

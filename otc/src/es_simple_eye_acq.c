@@ -323,7 +323,7 @@ void es_simple_eye_acq(eye_scan *eye_struct)
 			pixel_ber_tables[eye_struct->lane_number][vert_idx * rowsize + horz_idx] = this_ber;
 		else
 			pixel_ber_tables[eye_struct->lane_number][vert_idx * rowsize + horz_idx] = (prev_ber + this_ber) / 2;
-		central_err_cnts[eye_struct->lane_number] += current_pixel->center_error;
+		central_err_cnts[eye_struct->lane_number] = current_pixel->center_error; //DEBUG: IT SHOULD BE +=. DO NOT COMMIT THIS
 		central_samp_cnts[eye_struct->lane_number] += tot_samples;
 
 #if USE_DRP_RX_PRBS_ERR_CNT
