@@ -27,6 +27,7 @@
 #include "safe_printf.h"
 
 #include "es_controller.h"
+#include "es_simple_eye_acq.h"
 
 #include "webserver.h"
 /* JDH #include "platform_gpio.h" */
@@ -52,6 +53,7 @@ char *notfound_footer =
 		"</div> \
     </body> \
     </html>";
+
 
 /* dynamically generate 404 response:
  *  this inserts the original request string in betwween the notfound_header & footer strings
@@ -124,7 +126,7 @@ void generate_upod_table(FILE * stream) {
 	fprintf(stream, "</TABLE>\n");
 }
 
-void generate_ber_table(FILE * stream, int ch_to_display) {
+void generate_central_ber_table(FILE * stream, int ch_to_display) {
 	fprintf(stream, "<TABLE>\n");
 
 	fprintf(stream, "<tr>"
@@ -136,94 +138,67 @@ void generate_ber_table(FILE * stream, int ch_to_display) {
 	int i;
 	for (i = 0; i < 48; ++i) {
 		if (xaxi_eyescan_channel_active((u32) i)) {
-			eye_scan * eye_struct = get_eye_scan_lane(i);
-			eye_scan_pixel * eye_pixel = eye_struct->pixels;
-			//			int error_count = eye_pixel->center_error;
-			int error_count = drp_read_raw( DRP_RX_PRBS_ERR_CNT , 0 , 15 , eye_struct->lane_number );
-			u16 samp = eye_pixel->sample_count;
-			u8 prescale = eye_pixel->prescale;
-			int sample_count = samp * 32 << (1 + prescale);
 			if (i == ch_to_display)
 				fprintf(stream, "<tr style=\"color: LimeGreen; font-style: italic;\">");
 			else
 				fprintf(stream, "<tr>");
 			fprintf(stream, "<th>%d</th>"
 					"<td>%d</td>"
-					"<td>%d</td>"
+					"<td>%.3e</td>"
 					"</tr>\n",
-					i, error_count, sample_count);
-		} else {
-			fprintf(stream, "<tr style=\"color: Red;\">");
-			fprintf(stream, "<td>%d (inactive)</td></tr>\n", i);
+					i, central_err_cnts[i], central_samp_cnts[i]);
 		}
+		//		else {
+		//			fprintf(stream, "<tr style=\"color: Red;\">");
+		//			fprintf(stream, "<td>%d (inactive)</td></tr>\n", i);
+		//		}
 	}
 
 	fprintf(stream, "</TABLE>\n");
-}
-
-int get_v_offset(eye_scan_pixel * px) {
-	int to_return = abs(px->v_offset) + px->ut_sign * 256; //256 = 2^8 ut_sign is bit[8]
-	if(px->v_offset < 0) {
-		to_return = to_return + 128;//128=2^7 sign is bit [7]
-	}
-	return to_return;
-}
-
-int comp_pixel_coords(const void *p1, const void *p2) {
-	eye_scan_pixel *px1 = (eye_scan_pixel *) p1;
-	eye_scan_pixel *px2 = (eye_scan_pixel *) p2;
-
-	if (get_v_offset(px1) < get_v_offset(px2))
-		return -1;
-	if (get_v_offset(px1) > get_v_offset(px2))
-		return 1;
-
-	if (px1->h_offset < px2->h_offset)
-		return -1;
-	if (px1->h_offset > px2->h_offset)
-		return 1;
-
-	return 0;
+	fprintf(stream, "<p>(Disabled channels not shown)</p>\n");
 }
 
 void generate_eyescan_table(FILE * stream, int ch) {
+	if(pixel_ber_tables == NULL) {
+		fprintf(stream, "<text style=\"color:red\">No eyescan data yet</text>");
+		return;
+	}
+
 	if (!xaxi_eyescan_channel_active(ch)) {
 		fprintf(stream, "<text style=\"color:red\">Channel not active</text>");
 		return;
 	}
 
-	eye_scan * eslane = get_eye_scan_lane(ch);
-	int num_valid_px = eslane->pixel_count; // Store this instead of accessing eslane->pixel_count, which may change
+	fprintf(stream, "Channel %d eyescan data:<br>\n", ch);
 
-	// Sort the pixels in this lane first by vert offset (row), then by horz offset (col)
-	eye_scan_pixel * pixels = malloc(sizeof(eye_scan_pixel) * num_valid_px); //or NUM_PIXELS_TOTAL?
-	memcpy(pixels, eslane->pixels, sizeof(eye_scan_pixel) * num_valid_px);
-	qsort(pixels, num_valid_px, sizeof(eye_scan_pixel), &comp_pixel_coords);
+	eye_scan * eye_struct = get_eye_scan_lane(ch);
 
-	// Write the table by looping over this sorted list of pixels
-	fprintf(stream, "<TABLE>\n<tr>\n");
-	int i, prev_v_offset = -1;
-	for(i = 0; i < num_valid_px; ++i) {
-		int error_count = (pixels[i].error_count == 0 ? 1 : pixels[i].error_count);
-		int sample_count = pixels[i].sample_count * 32 << (1 + pixels[i].prescale);
-		double ber = ((double) error_count) / ((double) sample_count);
-		double MAX_BER = .1; //this is the value that will render as color = #FFFFFF
-		u32 color = 120 * (1 - log10(MAX_BER) / log10(ber));
-		int v_offset = get_v_offset(&pixels[i]);
+	// Write the table by looping over the stored tables from es_simple_eye_acq
+	fprintf(stream, "<TABLE>\n");
+	u16 max_vert_offset = get_max_vert_offset(eye_struct->vert_step_size);
+	int row, col;
+	int horz_size = 2 * (eye_struct->max_horz_offset / eye_struct->horz_step_size) + 1;
+	int vert_size = 2 * (max_vert_offset / eye_struct->vert_step_size) + 1;
+	for(row = 0; row < vert_size; ++row) {
+		fprintf(stream, "<tr>\n");
+		for(col = 0; col < horz_size; ++col){
+			double ber = pixel_ber_tables[ch][row * horz_size + col];
+			double MAX_BER = .001; // Anything worse than this renders as red. Anything only slightly better than this (4-5 orders of magnitude) renders as red/orange/yellow.
 
-		// End the row and start a new one if necessary
-		if(v_offset != prev_v_offset && prev_v_offset != -1)
-			fprintf(stream, "</tr>\n<tr>");
-		prev_v_offset = v_offset;
+			u32 color;
+			if (ber > MAX_BER)
+				color = 0;
+			else
+				color = 120 * (1 - log(MAX_BER) / log(ber));
 
-		//		fprintf(stream, "vo: %d, ho: %d, ut_sign: %d. errcnt: %d, sampcnt: %d, center_error: %d<br>\n", v_offset, pixels[i].h_offset, pixels[i].ut_sign, pixels[i].error_count, sample_count, pixels[i].center_error);
-		//		fprintf(stream, "vo: %d, ho: %d, BER:%.3e<br>\n", v_offset, pixels[i].h_offset, ber);
-		fprintf(stream, "<td style=\"color:hsl(%d, 100%%, 50%%)\">%.2e <br> <text style=\"font-size:10px\"> (%d, %d) </text> </td>", color, ber, v_offset, pixels[i].h_offset);
+			if(ber != ber) // This is the preferred way to check if something is NAN, for some reason.
+				fprintf(stream, "<td></td>\n");
+			else
+				fprintf(stream, "<td style=\"color:hsl(%d, 100%%, 50%%); font-size:12px;\">%.2e <br> <text style=\"font-size:9px\"> (%d, %d) </text> </td>\n", color, ber, row, col);
+		}
+		fprintf(stream, "</tr>\n");
 	}
-	fprintf(stream, "</tr>\n");
 	fprintf(stream, "</TABLE>\n");
-
-	free(pixels);
 }
 
 int parse_channel(char* req) {
@@ -283,7 +258,7 @@ int do_http_get(int sd, char *req, int rlen) {
 	 * *******************/
 	fprintf(stream, "<CENTER><B>Eyescan Data</B></CENTER><BR>\n");
 	int ch_to_display = parse_channel(req);
-	generate_ber_table(stream, ch_to_display);
+	generate_central_ber_table(stream, ch_to_display);
 	fprintf(stream, "<br><br>\n");
 	fprintf(stream, "<form action=\"\" method=\"get\"> View Channel: <input type=\"text\" size=3 name=\"ch\" value=\"%d\"> <input type=\"submit\" value=\"Submit\"><br>", ch_to_display);
 	fprintf(stream, "<br><br>\n");
@@ -308,149 +283,6 @@ int do_http_get(int sd, char *req, int rlen) {
 	return 0;
 }
 
-
-//int do_http_get(int sd, char *req, int rlen)
-//{
-//	char *response;
-//	size_t response_size;
-//	FILE *stream = open_memstream(&response, &response_size);
-//	int w;
-//
-//#ifndef USE_XILINX_ORIGINAL
-//	/* write the http headers */
-//	char http_header[1024];
-//	generate_http_header(http_header, "html", 0 /*strlen(pbuf)*/);
-//	fprintf(stream, "%s\n", http_header);
-//
-//	/* now write the web page data in two steps.  FIrst the Xilinx temp/voltages */
-//	char *pagefmt = " <HTML><HEAD><META HTTP-EQUIV=""refresh"" CONTENT=""10; URL=192.168.1.99""></HEAD"
-//			"<BODY><CENTER><B>Xilinx VC707 System Status (10 s refresh)</B></CENTER><BR><HR>"
-//			"Uptime: %d s<BR>"
-//			"Temperature = %0.1f C<BR>"
-//			"INT Voltage = %0.1f V<BR>"
-//			"AUX Voltage = %0.1f V<BR>"
-//			"BRAM Voltage = %0.1f V<BR><HR>";
-//	fprintf(stream,pagefmt,procStatus.uptime,procStatus.v7temp,procStatus.v7vCCINT,procStatus.v7vCCAUX,procStatus.v7vBRAM);
-//
-//#if POLL_UPOD_TEMPS
-//	char * upod_pagefmt = " <CENTER><B>uPod number %d at I2C Address %p</B></CENTER><BR><HR>"
-//			"Status = 0x%02x<BR>"
-//			"Temperature %d.%03d C<BR>"
-//			"3.3V = %d uV<BR>"
-//			"2.5V = %d uV<BR><HR>";
-//
-//	int idx = 0;
-//	for( idx=0 ; idx<8 ; idx++ ) {
-//
-//		fprintf( stream , upod_pagefmt , idx , upod_address(idx) , upodStatus[idx]->status, \
-//				upodStatus[idx]->tempWhole, upodStatus[idx]->tempFrac, \
-//				100*upodStatus[idx]->v33, 100*upodStatus[idx]->v25 );
-//	}
-//#endif
-//
-//
-//// Display error counts in each channel
-//	char * ber_pagefmt = " <CENTER><B>GTX number %d</B></CENTER><BR><HR>"
-//			"Error count = %d <BR>"
-//			"Sample count = %d <BR><HR>";
-//	int i;
-//
-//	eyescan_lock();
-//	//    for (i = 0; i < 48; ++i) {
-//	for (i = 0; i < 12; ++i) {
-//		xaxi_eyescan_enable_channel((u32) i); // for debugging
-//		if (xaxi_eyescan_channel_active((u32) i)){
-//			eye_scan * eye_struct = get_eye_scan_lane(i);
-//			eye_scan_pixel * eye_pixel = eye_struct->pixels;
-//			u8 error_count = eye_pixel->center_error;
-//			u16 samp = eye_pixel->sample_count;
-//			u8 prescale = eye_pixel->prescale;
-//			u32 sample_count = samp * 32 << (1 + prescale);
-//			fprintf(stream, ber_pagefmt, i, (int) error_count, (int) sample_count);
-//		}
-//	}
-//	eyescan_unlock();
-//
-//
-//
-//#ifdef THE_ETHERNET_COUNTERS_HAVE_BEEN_FIXED
-//	/* Then the ethernet info */
-//	pagefmt = "<BR>Ethernet information:<BR>"
-//			"Rx bytes count = %d<BR>"
-//			"Tx bytes count = %d<BR><HR>";
-//	fprintf(stream,pagefmt,ethStatus.regVal[XAE_RXBL_OFFSET],ethStatus.regVal[XAE_TXBL_OFFSET]);
-//#endif
-//
-//	/* and finally the end of the page */
-//	fprintf(stream,"</BODY></HTML>");
-//
-//	/* flush the stream into the actual string (response) */
-//	fflush(stream);
-//
-//	if ((w = lwip_write(sd, response, response_size)) < 0 ) {
-//		xil_printf("error writing web page to socket\r\n");
-//		xil_printf("attempted to lwip_write %d bytes, actual bytes written = %d\r\n", response_size, w);
-//		return -4;
-//	}
-//
-//	/* close the stream and deallocate the string */
-//	fclose(stream);
-//	free(response);
-//
-//	return 0;
-//#else
-//	/* determine file name */
-//	extract_file_name(filename, req, rlen, MAX_FILENAME);
-//
-//	/* respond with 404 if not present */
-//	if (mfs_exists_file(filename) == 0) {
-//		//xil_printf("requested file %s not found, returning 404\r\n", filename);
-//		do_404(sd, req, rlen);
-//		return -1;
-//	}
-//
-//	/* respond with correct file */
-//
-//	/* debug statement on UART */
-//	//xil_printf("http GET: %s\r\n", filename);
-//
-//	/* get a pointer to file extension */
-//	fext = get_file_extension(filename);
-//
-//	fd = mfs_file_open(filename, MFS_MODE_READ);
-//
-//	/* obtain file size,
-//	 * note that lseek with offset 0, MFS_SEEK_END does not move file pointer */
-//	fsize = mfs_file_lseek(fd, 0, MFS_SEEK_END);
-//
-//	/* write the http headers */
-//	hlen = generate_http_header(buf, fext, fsize);
-//	if (lwip_write(sd, buf, hlen) != hlen) {
-//		//xil_printf("error writing http header to socket\r\n");
-//		//xil_printf("http header = %s\r\n", buf);
-//		return -1;
-//	}
-//
-//	/* now write the file */
-//	while (fsize) {
-//		int w;
-//		n = mfs_file_read(fd, buf, BUFSIZE);
-//
-//		if ((w = lwip_write(sd, buf, n)) != n) {
-//			//xil_printf("error writing file (%s) to socket, remaining unwritten bytes = %d\r\n",
-//			//filename, fsize - n);
-//			//xil_printf("attempted to lwip_write %d bytes, actual bytes written = %d\r\n", n, w);
-//			break;
-//		}
-//
-//		fsize -= n;
-//	}
-//
-//	mfs_file_close(fd);
-//
-//	return 0;
-//#endif
-//}
 
 enum http_req_type { HTTP_GET, HTTP_POST, HTTP_UNKNOWN };
 enum http_req_type decode_http_request(char *req, int l)

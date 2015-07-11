@@ -19,7 +19,13 @@
 #ifndef ES_SIMPLE_EYE_ACQ_H_
 #define ES_SIMPLE_EYE_ACQ_H_
 
+u16 get_max_vert_offset(u16 vert_step_size);
 void es_simple_eye_acq(eye_scan *eye_struct);
+
+// Eyescan monitor for webpage
+extern double ** pixel_ber_tables;
+extern int * central_err_cnts;
+extern double * central_samp_cnts;
 
 
 #endif /* ES_SIMPLE_EYE_ACQ_H_ */
