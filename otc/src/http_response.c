@@ -160,8 +160,8 @@ void generate_central_ber_table(FILE * stream, int ch_to_display) {
 			fprintf(stream, "<th>%d</th>"
 					"<td>%d</td>"
 					"<td>%.3e</td>"
-					"<td><form method=\"POST\"> <input type=\"submit\" name=\"err_inj_ch_%d\" value=\"Inject error(s)\"> </input> </form></td>"
-					"<td><button onclick=\"view_channel(%d)\">View channel</button></td>"
+					"<td><form method=\"POST\"> <input type=\"submit\" name=\"err_inj_ch_%d\" value=\"Inject error(s)\"> </input> </form>"
+					"<button onclick=\"view_channel(%d)\">View channel</button></td>"
 					"</tr>\n",
 					i, central_err_cnts[i], central_samp_cnts[i], i, i);
 		}
@@ -176,9 +176,9 @@ void generate_central_ber_table(FILE * stream, int ch_to_display) {
 	fprintf(stream, "<p>Note: Disabled channels not shown</p>\n");
 	fprintf(stream, "<br><br>\n");
 	if(ch_to_display == -1)
-		fprintf(stream, "View channel (or \"none\"): <input type=\"text\" size=3 id=\"view_ch\" value=\"none\"> <button type=\"submit\" onclick=\"view_channel_from_form()\">Go</button><br>");
+		fprintf(stream, "View channel (or \"none\"): <input type=\"text\" size=3 id=\"view_ch\" value=\"none\" onkeydown=\"check_enter(event)\"> <button type=\"submit\" onclick=\"view_channel_from_form()\">Go</button><br>");
 	else
-		fprintf(stream, "View channel (or \"none\"): <input type=\"text\" size=3 id=\"view_ch\" value=\"%d\"> <button type=\"submit\" onclick=\"view_channel_from_form()\">Go</button><br>", ch_to_display);
+		fprintf(stream, "View channel (or \"none\"): <input type=\"text\" size=3 id=\"view_ch\" value=\"%d\" onkeydown=\"check_enter(event)\"> <button type=\"submit\" onclick=\"view_channel_from_form()\">Go</button><br>", ch_to_display);
 }
 
 void generate_eyescan_table(FILE * stream, int ch) {
@@ -268,6 +268,7 @@ int do_http_get(int sd, char *req, int rlen) {
 	fprintf(stream, "table, th, td { border: 1px solid black; border-collapse: collapse; }\n");
 	fprintf(stream, "th, td { padding: 4px; }\n");
 	fprintf(stream, "</STYLE>\n");
+	fprintf(stream, "<SCRIPT>function check_enter(e){ if(e.keyCode == 13) {view_channel_from_form();} }</SCRIPT>\n");
 	fprintf(stream, "<SCRIPT>function view_channel_from_form(){ window.location = document.getElementById(\"view_ch\").value; }</SCRIPT>\n");
 	fprintf(stream, "<SCRIPT>function view_channel(ch){ window.location = ch; }</SCRIPT>\n");
 	fprintf(stream, "</HEAD>\n");
