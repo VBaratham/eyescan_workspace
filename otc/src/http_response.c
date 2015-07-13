@@ -87,9 +87,19 @@ int do_http_post(int sd, char *req, int rlen)
 	int len = 0, n;
 	char *p;
 
-	if (lwip_write(sd, buf, len) != len) {
-		//xil_printf("error writing http POST response to socket\r\n");
-		//xil_printf("http header = %s\r\n", buf);
+	// Parse the number out of, "err_inj_ch_3=Inject+error(s)" (eg), which is part of the POST request body
+	char * param_prefix = "err_inj_ch_";
+	char * ptr = strstr(req, param_prefix) + strlen(param_prefix);
+	int ch = atoi(ptr);
+
+	xaxi_eyescan_error_inject(ch);
+
+	// return redirect response
+	char * response = "<html><head></head><body><script>window.location = document.referrer</script>";
+
+	if (lwip_write(sd, response, strlen(response)) != strlen(response)) {
+		xil_printf("error writing http POST response to socket\r\n");
+		xil_printf("http header = %s\r\n", buf);
 		return -1;
 	}
 
@@ -150,8 +160,10 @@ void generate_central_ber_table(FILE * stream, int ch_to_display) {
 			fprintf(stream, "<th>%d</th>"
 					"<td>%d</td>"
 					"<td>%.3e</td>"
+					"<td><form method=\"POST\"> <input type=\"submit\" name=\"err_inj_ch_%d\" value=\"Inject error(s)\"> </input> </form></td>"
+					"<td><button onclick=\"view_channel(%d)\">View channel</button></td>"
 					"</tr>\n",
-					i, central_err_cnts[i], central_samp_cnts[i]);
+					i, central_err_cnts[i], central_samp_cnts[i], i, i);
 		}
 		//		else {
 		//			fprintf(stream, "<tr style=\"color: Red;\">");
@@ -160,9 +172,10 @@ void generate_central_ber_table(FILE * stream, int ch_to_display) {
 	}
 
 	fprintf(stream, "</TABLE>\n");
-	fprintf(stream, "<p>(Disabled channels not shown)</p>\n");
+	fprintf(stream, "<p>Note: Error injection works about 75%% of the time</p>\n");
+	fprintf(stream, "<p>Note: Disabled channels not shown</p>\n");
 	fprintf(stream, "<br><br>\n");
-	fprintf(stream, "<form action=\"\" method=\"get\"> View Channel: <input type=\"text\" size=3 name=\"ch\" value=\"%d\"> <input type=\"submit\" value=\"Submit\"><br>", ch_to_display);
+	fprintf(stream, "View Channel: <input type=\"text\" size=3 id=\"view_ch\" value=\"%d\"> <button type=\"submit\" onclick=\"view_channel()\">Go</button><br>", ch_to_display);
 }
 
 void generate_eyescan_table(FILE * stream, int ch) {
@@ -207,17 +220,17 @@ void generate_eyescan_table(FILE * stream, int ch) {
 	}
 	fprintf(stream, "</TABLE>\n");
 
-	// DEBUG (remove)
+	// DEBUG
 	// Print the center error, and sample count from each pixel.
-	int i;
-	for(i = 0; i < eye_struct->pixel_count; ++i){
-		fprintf(stream, "center_error: %d, sample_count: %d<br>\n", eye_struct->pixels[i].center_error, eye_struct->pixels[i].sample_count);
-	}
+//	int i;
+//	for(i = 0; i < eye_struct->pixel_count; ++i){
+//		fprintf(stream, "center_error: %d, sample_count: %d<br>\n", eye_struct->pixels[i].center_error, eye_struct->pixels[i].sample_count);
+//	}
 }
 
 int parse_channel(char* req) {
 	// The channel to display is a URL parameter. Parse it out of the request
-	char * param_prefix = "/?ch=";
+	char * param_prefix = "GET /";
 	char * ptr = strstr(req, param_prefix) + strlen(param_prefix);
 	return atoi(ptr);
 }
@@ -240,11 +253,13 @@ int do_http_get(int sd, char *req, int rlen) {
 	 * *****************/
 	fprintf(stream, "<HTML>\n");
 	fprintf(stream, "<HEAD>\n");
-	fprintf(stream, "<META HTTP-EQUIV=""refresh"" CONTENT=""10; URL=192.168.1.99"">\n");
+//	fprintf(stream, "<META HTTP-EQUIV=""refresh"" CONTENT=""10; URL=192.168.1.99"">\n");
 	fprintf(stream, "<STYLE>\n");
 	fprintf(stream, "table, th, td { border: 1px solid black; border-collapse: collapse; }\n");
 	fprintf(stream, "th, td { padding: 4px; }\n");
 	fprintf(stream, "</STYLE>\n");
+	fprintf(stream, "<SCRIPT>function view_channel(){ window.location = document.getElementById(\"view_ch\").value; }</SCRIPT>\n");
+	fprintf(stream, "<SCRIPT>function view_channel(ch){ window.location = ch; }</SCRIPT>\n");
 	fprintf(stream, "</HEAD>\n");
 
 	/* ***********************
