@@ -45,6 +45,48 @@ u16 get_max_vert_offset(u16 vert_step_size) {
 	return max_vert_offset;
 }
 
+void init_monitor_tables(eye_scan * eye_struct, u16 max_horz_offset, u16 max_vert_offset) {
+	// Create ber tables for webpage if necessary
+	if (pixel_ber_tables == NULL) {
+		pixel_ber_tables = malloc(sizeof(double*) * MAX_NUMBER_OF_LANES);
+		central_err_cnts = malloc(sizeof(int) * MAX_NUMBER_OF_LANES);
+		central_samp_cnts = malloc(sizeof(double) * MAX_NUMBER_OF_LANES);
+
+		int rowsize = 2 * max_horz_offset / eye_struct->horz_step_size + 1;
+		int colsize = 2 * max_vert_offset / eye_struct->vert_step_size + 1;
+		int i, j;
+		for (i = 0; i < MAX_NUMBER_OF_LANES; ++i) {
+			pixel_ber_tables[i] = malloc(sizeof(double) * rowsize * colsize);
+			central_err_cnts[i] = 0;
+			central_samp_cnts[i] = 0;
+			for(j = 0; j < rowsize * colsize; ++j)
+				pixel_ber_tables[i][j] = NAN;
+		}
+	} else {
+		xil_printf("Warning: called init_monitor_tables() with tables already initialized\n");
+	}
+}
+
+void clear_monitor_tables() {
+	if (pixel_ber_tables != NULL) {
+		int i;
+		for(i = 0; i < MAX_NUMBER_OF_LANES; ++i) {
+			free(pixel_ber_tables[i]);
+			pixel_ber_tables[i] = NULL;
+		}
+		free(pixel_ber_tables);
+		pixel_ber_tables = NULL;
+	}
+	if (central_err_cnts != NULL) {
+		free(central_err_cnts);
+		central_err_cnts = NULL;
+	}
+	if(central_samp_cnts != NULL) {
+		free(central_samp_cnts);
+		central_samp_cnts = NULL;
+	}
+}
+
 void es_simple_eye_acq(eye_scan *eye_struct)
 {
 	//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Does nothing but return.
@@ -86,24 +128,6 @@ void es_simple_eye_acq(eye_scan *eye_struct)
 	//Find largest multiple of vert_step_size that is less than 127
 	max_vert_offset = get_max_vert_offset(vert_step_size);
 
-	// Create ber tables for webpage if necessary
-	if (pixel_ber_tables == NULL) {
-		pixel_ber_tables = malloc(sizeof(double*) * MAX_NUMBER_OF_LANES);
-		central_err_cnts = malloc(sizeof(int) * MAX_NUMBER_OF_LANES);
-		central_samp_cnts = malloc(sizeof(double) * MAX_NUMBER_OF_LANES);
-
-		int rowsize = 2 * max_horz_offset / eye_struct->horz_step_size + 1;
-		int colsize = 2 * max_vert_offset / eye_struct->vert_step_size + 1;
-		int i, j;
-		for (i = 0; i < MAX_NUMBER_OF_LANES; ++i) {
-			pixel_ber_tables[i] = malloc(sizeof(double) * rowsize * colsize);
-			central_err_cnts[i] = 0;
-			central_samp_cnts[i] = 0;
-			for(j = 0; j < rowsize * colsize; ++j)
-				pixel_ber_tables[i][j] = NAN;
-		}
-	}
-
 	//Read DONE bit & state of Eye Scan State Machine
 	if( DEBUG ) printf( "es_simple_eye_acq read es_control_status lane %d\n" , eye_struct->lane_number );
 	es_status = drp_read(ES_CONTROL_STATUS, eye_struct->lane_number);
@@ -127,6 +151,10 @@ void es_simple_eye_acq(eye_scan *eye_struct)
 			eye_struct->ut_sign = 0;
 		}
 
+		// Monitor tables
+		clear_monitor_tables();
+		init_monitor_tables(eye_struct, max_horz_offset, max_vert_offset);
+
 		//Starts in center of eye
 		eye_struct->horz_offset = 0;
 		eye_struct->vert_offset = -max_vert_offset - vert_step_size; //Incremented to -max_vert_offset in SETUP state
@@ -135,6 +163,7 @@ void es_simple_eye_acq(eye_scan *eye_struct)
 		drp_write(eye_struct->prescale, ES_PRESCALE, eye_struct->lane_number);
 		//Gear Shifting end
 		eye_struct->state = SETUP_STATE; //SETUP
+
 	}
 
 	//%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Increments vert_offset,
@@ -143,7 +172,6 @@ void es_simple_eye_acq(eye_scan *eye_struct)
 	if(eye_struct->state == SETUP_STATE) {  //(SETUP x0020 = 32)
 		if( eye_struct->pixel_count >= NUM_PIXELS_TOTAL ) {
 			eye_struct->state = DONE_STATE;
-			// Free memory from ber table? Might want to keep the webpage updated
 			return;
 		}
 		//Advance vert_offset (-max to max)

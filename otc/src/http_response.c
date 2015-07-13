@@ -127,6 +127,11 @@ void generate_upod_table(FILE * stream) {
 }
 
 void generate_central_ber_table(FILE * stream, int ch_to_display) {
+	if(pixel_ber_tables == NULL) {
+		fprintf(stream, "<text style=\"color:red\">No BER data yet</text>");
+		return;
+	}
+
 	fprintf(stream, "<TABLE>\n");
 
 	fprintf(stream, "<tr>"
@@ -156,6 +161,8 @@ void generate_central_ber_table(FILE * stream, int ch_to_display) {
 
 	fprintf(stream, "</TABLE>\n");
 	fprintf(stream, "<p>(Disabled channels not shown)</p>\n");
+	fprintf(stream, "<br><br>\n");
+	fprintf(stream, "<form action=\"\" method=\"get\"> View Channel: <input type=\"text\" size=3 name=\"ch\" value=\"%d\"> <input type=\"submit\" value=\"Submit\"><br>", ch_to_display);
 }
 
 void generate_eyescan_table(FILE * stream, int ch) {
@@ -199,6 +206,13 @@ void generate_eyescan_table(FILE * stream, int ch) {
 		fprintf(stream, "</tr>\n");
 	}
 	fprintf(stream, "</TABLE>\n");
+
+	// DEBUG (remove)
+	// Print the center error, and sample count from each pixel.
+	int i;
+	for(i = 0; i < eye_struct->pixel_count; ++i){
+		fprintf(stream, "center_error: %d, sample_count: %d<br>\n", eye_struct->pixels[i].center_error, eye_struct->pixels[i].sample_count);
+	}
 }
 
 int parse_channel(char* req) {
@@ -254,13 +268,11 @@ int do_http_get(int sd, char *req, int rlen) {
 #endif
 
 	/* *******************
-	 * Bit error rates
+	 * Eyescan data
 	 * *******************/
 	fprintf(stream, "<CENTER><B>Eyescan Data</B></CENTER><BR>\n");
 	int ch_to_display = parse_channel(req);
 	generate_central_ber_table(stream, ch_to_display);
-	fprintf(stream, "<br><br>\n");
-	fprintf(stream, "<form action=\"\" method=\"get\"> View Channel: <input type=\"text\" size=3 name=\"ch\" value=\"%d\"> <input type=\"submit\" value=\"Submit\"><br>", ch_to_display);
 	fprintf(stream, "<br><br>\n");
 	generate_eyescan_table(stream, ch_to_display);
 	fprintf(stream, "<HR>\n");
