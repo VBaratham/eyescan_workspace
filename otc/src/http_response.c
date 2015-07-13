@@ -175,12 +175,20 @@ void generate_central_ber_table(FILE * stream, int ch_to_display) {
 	fprintf(stream, "<p>Note: Error injection works about 75%% of the time</p>\n");
 	fprintf(stream, "<p>Note: Disabled channels not shown</p>\n");
 	fprintf(stream, "<br><br>\n");
-	fprintf(stream, "View Channel: <input type=\"text\" size=3 id=\"view_ch\" value=\"%d\"> <button type=\"submit\" onclick=\"view_channel()\">Go</button><br>", ch_to_display);
+	if(ch_to_display == -1)
+		fprintf(stream, "View channel (or \"none\"): <input type=\"text\" size=3 id=\"view_ch\" value=\"none\"> <button type=\"submit\" onclick=\"view_channel_from_form()\">Go</button><br>");
+	else
+		fprintf(stream, "View channel (or \"none\"): <input type=\"text\" size=3 id=\"view_ch\" value=\"%d\"> <button type=\"submit\" onclick=\"view_channel_from_form()\">Go</button><br>", ch_to_display);
 }
 
 void generate_eyescan_table(FILE * stream, int ch) {
 	if(pixel_ber_tables == NULL) {
 		fprintf(stream, "<text style=\"color:red\">No eyescan data yet</text>");
+		return;
+	}
+
+	if (ch == -1){
+		fprintf(stream, "<text style=\"color:red\">Select a channel to view eyescan data</text>");
 		return;
 	}
 
@@ -232,7 +240,9 @@ int parse_channel(char* req) {
 	// The channel to display is a URL parameter. Parse it out of the request
 	char * param_prefix = "GET /";
 	char * ptr = strstr(req, param_prefix) + strlen(param_prefix);
-	return atoi(ptr);
+	if(isdigit(*ptr))
+		return atoi(ptr);
+	else return -1;
 }
 
 /* respond for a file GET request */
@@ -258,14 +268,14 @@ int do_http_get(int sd, char *req, int rlen) {
 	fprintf(stream, "table, th, td { border: 1px solid black; border-collapse: collapse; }\n");
 	fprintf(stream, "th, td { padding: 4px; }\n");
 	fprintf(stream, "</STYLE>\n");
-	fprintf(stream, "<SCRIPT>function view_channel(){ window.location = document.getElementById(\"view_ch\").value; }</SCRIPT>\n");
+	fprintf(stream, "<SCRIPT>function view_channel_from_form(){ window.location = document.getElementById(\"view_ch\").value; }</SCRIPT>\n");
 	fprintf(stream, "<SCRIPT>function view_channel(ch){ window.location = ch; }</SCRIPT>\n");
 	fprintf(stream, "</HEAD>\n");
 
 	/* ***********************
 	 * System status
 	 * ***********************/
-	char *pagefmt = "<BODY>\n<CENTER><B>Xilinx VC707 System Status (10 s refresh)</B></CENTER><BR>\n"
+	char *pagefmt = "<BODY>\n<CENTER><B>Xilinx VC707 System Status</B></CENTER><BR>\n"
 			"Uptime: %d s<BR>"
 			"Temperature = %0.1f C<BR>\n"
 			"INT Voltage = %0.1f V<BR>\n"
