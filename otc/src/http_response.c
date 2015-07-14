@@ -161,7 +161,7 @@ void generate_central_ber_table(FILE * stream, int ch_to_display) {
 					"<td>%d</td>"
 					"<td>%.3e</td>"
 					"<td><form method=\"POST\"> <input type=\"submit\" name=\"err_inj_ch_%d\" value=\"Inject error(s)\"> </input> </form>"
-					"<button onclick=\"view_channel(%d)\">View channel</button></td>"
+					"<button onclick=\"window.location = '%d' + window.location.search\">View channel</button></td>"
 					"</tr>\n",
 					i, central_err_cnts[i], central_samp_cnts[i], i, i);
 		}
@@ -172,7 +172,6 @@ void generate_central_ber_table(FILE * stream, int ch_to_display) {
 	}
 
 	fprintf(stream, "</TABLE>\n");
-	fprintf(stream, "<p>Note: Error injection works about 75%% of the time</p>\n");
 	fprintf(stream, "<p>Note: Disabled channels not shown</p>\n");
 	fprintf(stream, "<br><br>\n");
 	if(ch_to_display == -1)
@@ -236,8 +235,15 @@ void generate_eyescan_table(FILE * stream, int ch) {
 //	}
 }
 
+int check_auto_refresh(char * req) {
+	// Return true if the URL parameter "refresh=true" is present
+	char * param_prefix = "?refresh=";
+	char * ptr = strstr(req, param_prefix) + strlen(param_prefix);
+	return memcmp(ptr, "true", 4) == 0;
+}
+
 int parse_channel(char* req) {
-	// The channel to display is a URL parameter. Parse it out of the request
+	// Parse the channel to display out of the request
 	char * param_prefix = "GET /";
 	char * ptr = strstr(req, param_prefix) + strlen(param_prefix);
 	if(isdigit(*ptr))
@@ -263,26 +269,28 @@ int do_http_get(int sd, char *req, int rlen) {
 	 * *****************/
 	fprintf(stream, "<HTML>\n");
 	fprintf(stream, "<HEAD>\n");
-//	fprintf(stream, "<META HTTP-EQUIV=""refresh"" CONTENT=""10; URL=192.168.1.99"">\n");
+	if(check_auto_refresh(req))
+		fprintf(stream, "<META HTTP-EQUIV=""refresh"" CONTENT=""10"">\n");
 	fprintf(stream, "<STYLE>\n");
 	fprintf(stream, "table, th, td { border: 1px solid black; border-collapse: collapse; }\n");
 	fprintf(stream, "th, td { padding: 4px; }\n");
 	fprintf(stream, "</STYLE>\n");
 	fprintf(stream, "<SCRIPT>function check_enter(e){ if(e.keyCode == 13) {view_channel_from_form();} }</SCRIPT>\n");
-	fprintf(stream, "<SCRIPT>function view_channel_from_form(){ window.location = document.getElementById(\"view_ch\").value; }</SCRIPT>\n");
-	fprintf(stream, "<SCRIPT>function view_channel(ch){ window.location = ch; }</SCRIPT>\n");
+	fprintf(stream, "<SCRIPT>function view_channel_from_form(){ window.location = document.getElementById(\"view_ch\").value + window.location.search; }</SCRIPT>\n");
 	fprintf(stream, "</HEAD>\n");
 
 	/* ***********************
 	 * System status
 	 * ***********************/
-	char *pagefmt = "<BODY>\n<CENTER><B>Xilinx VC707 System Status</B></CENTER><BR>\n"
+	char *pagefmt = "<BODY>\n"
+			"<CENTER><B>Xilinx VC707 System Status</B></CENTER><BR>\n"
+			"<input type=\"checkbox\" name=\"refresh\" onclick=\"window.location.search='?refresh=' + this.checked\" %s> Auto refresh (10s)<br>\n"
 			"Uptime: %d s<BR>"
 			"Temperature = %0.1f C<BR>\n"
 			"INT Voltage = %0.1f V<BR>\n"
 			"AUX Voltage = %0.1f V<BR>\n"
 			"BRAM Voltage = %0.1f V<BR>\n<HR>";
-	fprintf(stream,pagefmt,procStatus.uptime,procStatus.v7temp,procStatus.v7vCCINT,procStatus.v7vCCAUX,procStatus.v7vBRAM);
+	fprintf(stream,pagefmt,(check_auto_refresh(req) ? "checked" : ""), procStatus.uptime,procStatus.v7temp,procStatus.v7vCCINT,procStatus.v7vCCAUX,procStatus.v7vBRAM);
 
 #ifdef POLL_UPOD_TEMPS
 	/* *******************
