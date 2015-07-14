@@ -351,7 +351,7 @@ void es_simple_eye_acq(eye_scan *eye_struct)
 			pixel_ber_tables[eye_struct->lane_number][vert_idx * rowsize + horz_idx] = this_ber;
 		else
 			pixel_ber_tables[eye_struct->lane_number][vert_idx * rowsize + horz_idx] = (prev_ber + this_ber) / 2;
-		central_err_cnts[eye_struct->lane_number] = current_pixel->center_error; //DEBUG: IT SHOULD BE +=. DO NOT COMMIT THIS
+		central_err_cnts[eye_struct->lane_number] = current_pixel->center_error; // It looks like eye_scan_pixel.center_error is the total number of errors at the time the pixel was scanned. See similar comment in src/Debug/py_scripts/run_es_host_pc.py -VB 7/13/2015
 		central_samp_cnts[eye_struct->lane_number] += tot_samples;
 
 #if USE_DRP_RX_PRBS_ERR_CNT
