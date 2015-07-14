@@ -284,7 +284,7 @@ int do_http_get(int sd, char *req, int rlen) {
 	 * ***********************/
 	char *pagefmt = "<BODY>\n"
 			"<CENTER><B>Xilinx VC707 System Status</B></CENTER><BR>\n"
-			"<input type=\"checkbox\" name=\"refresh\" onclick=\"window.location.search='?refresh=' + this.checked\" %s> Auto refresh (10s)<br>\n"
+			"<input type=\"checkbox\" name=\"refresh\" onclick=\"window.location.search='?refresh=' + this.checked\" %s> Auto refresh (10s)<br><br>\n"
 			"Uptime: %d s<BR>"
 			"Temperature = %0.1f C<BR>\n"
 			"INT Voltage = %0.1f V<BR>\n"
